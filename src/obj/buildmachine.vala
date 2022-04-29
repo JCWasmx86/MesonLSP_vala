@@ -1,6 +1,6 @@
-/* main.vala
+/* buildmachine.vala
  *
- * Copyright 2022 JCWasmx86
+ * Copyright 2022 JCWasmx86 <JCWasmx86@t-online.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,19 +14,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-int main (string[] args) {
-	GLib.Log.writer_default_set_use_stderr (true);
-	GLib.Log.set_debug_enabled (true);
-	var main_loop = new MainLoop ();
-	var s = new Meson.MesonLsp (main_loop);
-	var new_stdout_fd = Posix.dup (Posix.STDOUT_FILENO);
-    Posix.close (Posix.STDOUT_FILENO);
-	Posix.dup2 (Posix.STDERR_FILENO, Posix.STDOUT_FILENO);
-	var input_stream = new UnixInputStream (Posix.STDIN_FILENO, false);
-	var output_stream = new UnixOutputStream (new_stdout_fd, false);
-	s.accept_io_stream (new SimpleIOStream (input_stream, output_stream));
-	main_loop.run ();
-	return 0;
+namespace Meson {
+	class BuildMachine {
+
+	}
 }

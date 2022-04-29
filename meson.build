@@ -8,4 +8,3 @@ add_project_arguments(['--vapidir', vapi_dir], language: 'vala')
 
 subdir('parser')
 subdir('src')
-
