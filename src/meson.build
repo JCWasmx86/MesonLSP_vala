@@ -1,4 +1,5 @@
-	mesonlsp_sources = [
+mesonlsp_sources = [
+	'ast.vala',
 	'main.vala',
 	'server.vala',
 	'symbol_tree.vala',
@@ -24,4 +25,4 @@ executable('meson_lsp', mesonlsp_sources,
 	include_directories : incdirs,
 	link_with: ts_lib
 )
-
+warn (x)

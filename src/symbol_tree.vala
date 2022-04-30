@@ -22,7 +22,7 @@ namespace Meson {
 	class SymbolTree : Data {
 		internal Gee.List<Data> datas {get; set; default = new Gee.ArrayList<Data>(); }
 		internal string filename;
-
+		internal SourceFile? file;
 		internal Gee.List<Symbol> flatten () {
 			var ret = new Gee.ArrayList<Symbol> ();
 			foreach (var data in this.datas) {
@@ -55,6 +55,36 @@ namespace Meson {
 			return null;
 		}
 
+		internal SourceFile merge () {
+			info ("Merging: %s", this.filename);
+			for (var i = 0; i < this.file.statements.size; i++) {
+				var stmt = this.file.statements[i];
+				if (stmt is FunctionExpression && ((FunctionExpression)stmt).name == "subdir") {
+					var arg_list = ((FunctionExpression)stmt).arg_list;
+					if (arg_list == null || arg_list.args.size == 0)
+						continue;
+					var arg = arg_list.args[0];
+					if (arg is StringLiteral) {
+						info ("Found call to subdir: %s", ((StringLiteral)arg).val);
+						var found = false;
+						foreach (var data in this.datas) {
+							if (found) {
+								assert (data is SymbolTree);
+								var s = ((SymbolTree)data).merge ();
+								this.file.statements.insert_all (i, s.statements);
+								i += s.statements.size;
+								break;
+							}
+							if (data is Subdir && ((Subdir)data).name == ((StringLiteral)arg).val) {
+								found = true;
+							}
+						}
+					}
+				}
+			}
+			return this.file;
+		}
+
 		public static SymbolTree build (Uri uri) {
 			var ret = new SymbolTree ();
 			var file = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), "meson.build");
@@ -68,12 +98,16 @@ namespace Meson {
 			var data = "";
 			size_t data_length = 0;
 			FileUtils.get_contents (file.get_path (), out data, out data_length);
-			var root = ps.parse_string (null, data, (uint32)data_length).root_node ();
+			var root = ps.parse_string (null, data + "\n", (uint32)data_length + 1).root_node ();
+			info ("%s", root.to_string ());
+			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root);
+			assert (ret.file != null);
 			var build_def = root.named_child (0);
 			if (build_def.type () != "build_definition") {
 				info ("Unexpected type: %s", build_def.type ());
 				return ret;
 			}
+
 			for (var i = 0; i < build_def.named_child_count (); i++) {
 				var stmt = build_def.named_child (i);
 				if (stmt.type () != "statement")
@@ -96,7 +130,9 @@ namespace Meson {
 								sd.name = str;
 								ret.datas.add (sd);
 								var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
-								ret.datas.add (SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE)));
+								var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE));
+								assert (st.file != null);
+								ret.datas.add (st);
 							}
 						}
 					} else if (s.type () == "assignment_statement") {

@@ -35,6 +35,9 @@ namespace TreeSitter {
 		[CCode (cname = "ts_node_named_child")]
 		public TSNode named_child (uint index);
 
+		[CCode (cname = "ts_node_child")]
+		public TSNode child (uint index);
+
 		[CCode (cname = "ts_node_type")]
 		public unowned string type ();
 
@@ -43,6 +46,9 @@ namespace TreeSitter {
 
 		[CCode (cname = "ts_node_named_child_count")]
 		public uint32 named_child_count ();
+
+		[CCode (cname = "ts_node_child_count")]
+		public uint32 child_count ();
 
 		[CCode (cname = "ts_node_start_byte")]
 		public uint32 start_byte ();

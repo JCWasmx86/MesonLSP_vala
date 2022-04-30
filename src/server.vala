@@ -23,6 +23,7 @@ namespace Meson {
 		SymbolTree tree;
 		TypeRegistry tr;
 		MainLoop loop;
+		SourceFile ast;
 		internal MesonLsp (MainLoop l) {
 			this.loop = l;
 			this.tr = new TypeRegistry ();
@@ -36,6 +37,9 @@ namespace Meson {
 		            break;
 		        case "textDocument/documentSymbol":
 		        	this.document_symbol (client, id, parameters);
+		        	break;
+		        case "textDocument/definition":
+		        	this.definition (client, id, parameters);
 		        	break;
 			}
 			return true;
@@ -57,6 +61,62 @@ namespace Meson {
                 )
             ));
 		}
+
+		public void definition (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
+			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
+			// First find the identifier to look for
+			var symbol_name = this.ast.find_identifier (p.get_file(), p.position);
+			var ret = (Location) null;
+			if (symbol_name == null) {
+				client.reply (id, null);
+				return;
+			}
+			info ("Found symbol at location: %s", symbol_name);
+			var found = this.ast.find_symbol (symbol_name);
+			if (found.is_empty) {
+				info ("No matching declarations found :(");
+				client.reply (id, null);
+				return;
+			}
+			found.sort ((a,b) => {
+				var pf = p.get_file();
+				if (a.sref.file == pf) {
+					if (a.sref.start_line > p.position.line)
+						return 1;
+				}
+				if (b.sref.file == pf) {
+					if (b.sref.start_line > p.position.line)
+						return 1;
+				}
+				if (a.sref.file == b.sref.file && a.sref.file == pf) {
+					var l_diff_a = p.position.line - a.sref.start_line;
+					var l_diff_b = p.position.line - b.sref.start_line;
+					if (l_diff_a == l_diff_b)
+						return 0;
+					return l_diff_a < l_diff_b ? -1 : 1;
+				}
+				if (a.sref.file == pf)
+					return -1;
+				if (b.sref.file == pf)
+					return 1;
+				return 0;
+			});
+			var first_good = found[0];
+			info ("Found first good: %s (%u %u)", first_good.sref.file, first_good.sref.start_line, first_good.sref.start_column);
+			var location = new Location ();
+			location.uri = File.new_for_path (first_good.sref.file).get_uri();
+			location.range = new Range () {
+				start = new Position () {
+					line = first_good.sref.start_line,
+					character = first_good.sref.start_column
+				},
+				end = new Position () {
+					line = first_good.sref.end_line,
+					character = first_good.sref.end_column
+				}
+			};
+			client.reply (id, Util.object_to_variant (location));
+		}
 		public void document_symbol (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
 			var syms = this.tree.get_symbols (File.new_for_uri (p.textDocument.uri));
@@ -70,6 +130,7 @@ namespace Meson {
 
 		internal void load_tree (Uri dir) throws GLib.Error {
 			this.tree = SymbolTree.build (dir);
+			this.ast = this.tree.merge ();
 		}
 		public Variant build_dict (...) {
 		    var builder = new VariantBuilder (new VariantType ("a{sv}"));

@@ -41,6 +41,10 @@ namespace Meson {
     class TextDocumentPositionParams : Object {
         public TextDocumentIdentifier textDocument { get; set; }
         public Position position { get; set; }
+
+        internal string get_file () {
+        	return Uri.parse (this.textDocument.uri, UriFlags.NONE).get_path();
+        }
     }
     class TextDocumentIdentifier : Object {
         public string uri { get; set; }
@@ -86,8 +90,13 @@ namespace Meson {
         Operator = 25,
         TypeParameter = 26
     }
-    class Range : Object{
+    class Range : Object {
         public Position start { get; set; }
         public Position end { get; set; }
     }
+
+    class Location : Object {
+		public string uri { get; set; }
+		public Range range { get; set; }
+	}
 }

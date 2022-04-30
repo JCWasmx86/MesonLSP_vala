@@ -24,5 +24,14 @@ namespace Meson {
 			var json = Json.gvariant_serialize (variant);
 			return Json.gobject_deserialize (typeof (T), json);
 		}
+
+		public static Variant object_to_variant (Object object) throws Error {
+			var json = Json.gobject_serialize (object);
+			return Json.gvariant_deserialize (json, null);
+    	}
+
+		public static string get_string_value (string data, TreeSitter.TSNode node) {
+			return data.substring (node.start_byte (), node.end_byte () - node.start_byte ());
+		}
 	}
 }

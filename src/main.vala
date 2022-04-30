@@ -17,6 +17,20 @@
  */
 
 int main (string[] args) {
+	if (args.length == 2) {
+		var ts = new TreeSitter.TSParser ();
+		var file = args[1];
+		var data = "";
+		size_t data_len = 0;
+		FileUtils.get_contents (file, out data, out data_len);
+		data += "\n";
+		data_len++;
+		ts.set_language (TreeSitter.tree_sitter_meson ());
+		var root = ts.parse_string (null, data, (uint32)data_len);
+		Meson.SourceFile.build_ast (data, file, root.root_node ());
+		GLib.stdout.printf ("%s\n", root.root_node ().to_string ());
+		return 0;
+	}
 	GLib.Log.writer_default_set_use_stderr (true);
 	GLib.Log.set_debug_enabled (true);
 	var main_loop = new MainLoop ();
