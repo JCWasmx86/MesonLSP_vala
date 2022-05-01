@@ -35,7 +35,7 @@ namespace Meson {
 		}
 
 		internal bool contains (string file, Position pos) {
-			info ("Is %s(%u:%u) in (%s/%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
+			//info ("Is %s(%u:%u) in %s(%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
 			if (this.file != file)
 				return false;
 			var line_matches = pos.line >= this.start_line && pos.line <= this.end_line;
@@ -64,6 +64,10 @@ namespace Meson {
 			}
 			for (var i = 0; i < build_def.named_child_count (); i++) {
 				var stmt = build_def.named_child (i);
+				if (stmt.type() == "comment")
+					continue;
+				if (stmt.named_child_count () == 1 && stmt.named_child (0).type() == "comment")
+					continue;
 				ret.statements.add (Statement.parse (data, filename, stmt));
 			}
 			return ret;
@@ -98,7 +102,7 @@ namespace Meson {
 
 	class Statement : CodeNode {
 		internal static Statement parse (string data, string filename, TreeSitter.TSNode tsn) {
-			if (tsn.type () != "statement") {
+			if (tsn.type () != "statement" && tsn.type() != "comment") {
 				var js = new JumpStatement ();
 				js.sref = new SourceReference (filename, tsn);
 				js.is_break = Util.get_string_value (data, tsn).strip () == "break";
@@ -114,7 +118,12 @@ namespace Meson {
 				return SelectionStatement.parse (data, filename, child);
 			case "iteration_statement":
 				return IterationStatement.parse (data, filename, child);
+			case "comment":
+				info ("COMMENT: %s", child.to_string ());
+				info ("COMMENT: %s", tsn.to_string ());
+				break;
 			}
+			critical ("Unknown thing: %s", child.type());
 			return null;
 		}
 	}
@@ -186,7 +195,7 @@ namespace Meson {
 				} else if (Util.get_string_value (data, c).strip () == "else") {
 					ret.blocks.add (tmp);
 					tmp = new Gee.ArrayList<Statement>();
-				} else if (c.type () == "statement") {
+				} else if (c.type () == "statement" && (c.named_child_count () == 1 && c.named_child (0).type() != "comment")) {
 					tmp.add (Statement.parse (data, filename, c));
 				}
 			}
@@ -209,7 +218,6 @@ namespace Meson {
 				if (i is Identifier) {
 					var ii = (Identifier)i;
 					if (ii.name == name) {
-						info ("HERE!!!");
 						var sym = new SymbolDefinition();
 						sym.sref = i.sref;
 						sym.is_foreach = true;
@@ -250,6 +258,11 @@ namespace Meson {
 			}
 			ret.id = Expression.parse (data, filename, tsn.named_child (1));
 			for (var i = 2; i < tsn.named_child_count (); i++) {
+				if (tsn.named_child (i).type () == "comment")
+					continue;
+				var stmt = tsn.named_child (i);
+				if (stmt.named_child_count () == 1 && stmt.named_child (0).type() == "comment")
+					continue;
 				ret.statements.add (Statement.parse (data, filename, tsn.named_child (i)));
 			}
 			return ret;
@@ -262,11 +275,17 @@ namespace Meson {
 		internal Expression rhs;
 
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
-			info(">>HERE");
 			var ret = new Gee.ArrayList<SymbolDefinition>();
 			if (!(this.lhs is Identifier))
 				return ret;
 			if (((Identifier)this.lhs).name != name)
+				return ret;
+			// E.g. the code
+			// x = [] (1)
+			// x += 'foo.c' (2)
+			// do_with(x)
+			// Jump to (1)
+			if (this.op != AssignmentOperator.EQ)
 				return ret;
 			var sym = new SymbolDefinition();
 			sym.is_foreach = false;
@@ -494,7 +513,7 @@ namespace Meson {
 			var s = this.obj.find_identifier (file, pos);
 			if (s != null)
 				return s;
-			return this.list.find_identifier (file, pos);
+			return this.list == null ? null : this.list.find_identifier (file, pos);
 		}
 		internal static new MethodExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
 			assert (tsn.type() == "method_expression");
@@ -542,7 +561,7 @@ namespace Meson {
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
-			return this.arg_list.find_identifier (file, pos);
+			return this.arg_list == null ? null : this.arg_list.find_identifier (file, pos);
 		}
 
 		internal static new FunctionExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
@@ -622,7 +641,8 @@ namespace Meson {
 			var ret = new BinaryExpresssion ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.lhs = Expression.parse (data, filename, tsn.named_child (0));
-			switch (Util.get_string_value (data, tsn.named_child (1)).strip ()) {
+			var op = tsn.named_child_count () == 2 ? tsn.named_child (1) : tsn.child (1);
+			switch (Util.get_string_value (data, op).strip ()) {
 				case "+":
 					ret.op = BinaryOperator.PLUS;
 					break;
@@ -662,13 +682,19 @@ namespace Meson {
 				case "not in":
 					ret.op = BinaryOperator.NOT_IN;
 					break;
+				case "or":
+					ret.op = BinaryOperator.OR;
+					break;
+				case "and":
+					ret.op = BinaryOperator.AND;
+					break;
 			}
-			ret.rhs = Expression.parse (data, filename, tsn.named_child (2));
+			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count() == 2 ? 1 : 2));
 			return ret;
 		}
 	}
 	enum BinaryOperator {
-		PLUS, MINUS, STAR, SLASH, MOD, EQ_EQ, N_EQ, GT, LT, GE, LE, IN, NOT_IN
+		PLUS, MINUS, STAR, SLASH, MOD, EQ_EQ, N_EQ, GT, LT, GE, LE, IN, NOT_IN, OR, AND
 	}
 	class UnaryExpression : Expression {
 		internal Expression rhs;
@@ -708,6 +734,15 @@ namespace Meson {
 		// outer[inner]
 		internal Expression inner;
 		internal Expression outer;
+		
+		internal override string? find_identifier (string file, Position pos) {
+			if (!this.sref.contains (file, pos))
+				return null;
+			var s = this.outer.find_identifier (file, pos);
+			if (s != null)
+				return s;
+			return this.inner.find_identifier (file, pos);
+		}
 
 		internal static new ArrayAccessExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
 			assert (tsn.type() == "subscript_expression");

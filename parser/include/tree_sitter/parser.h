@@ -222,4 +222,3 @@ struct TSLanguage {
 #endif
 
 #endif  // TREE_SITTER_PARSER_H_
-

@@ -10,3 +10,6 @@ subdir('src')
 if true
 
 endif
+x = 5000
+
+warning(x)
