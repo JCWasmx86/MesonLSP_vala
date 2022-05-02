@@ -105,7 +105,7 @@ namespace Meson {
 			} else
 				FileUtils.get_contents (file.get_path (), out data, out data_length);
 			var root = ps.parse_string (null, data + "\n", (uint32)data_length + 1).root_node ();
-			info ("%s", root.to_string ());
+			//info ("%s", root.to_string ());
 			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root);
 			assert (ret.file != null);
 			if (root.named_child_count() == 0)

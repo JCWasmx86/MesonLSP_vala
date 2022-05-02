@@ -72,6 +72,8 @@ namespace Meson {
 					continue;
 				if (stmt.named_child_count () == 1 && stmt.named_child (0).type() == "comment")
 					continue;
+				if (stmt.named_child_count() == 0)
+					continue;
 				ret.statements.add (Statement.parse (data, filename, stmt));
 			}
 			return ret;
