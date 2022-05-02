@@ -31,3 +31,7 @@ class MesonHoverProvider(Ide.LspHoverProvider):
     def do_prepare(self):
         self.props.priority = 800
         MesonService.bind_client(self)
+class MesonHighlighter(Ide.LspHighlighter):
+    def do_load(self):
+        MesonService.bind_client(self)
+

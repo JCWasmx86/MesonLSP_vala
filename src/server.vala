@@ -96,7 +96,8 @@ namespace Meson {
                 capabilities: build_dict (
                 	textDocumentSync : new Variant.int32 (1 /* Full*/),
                     documentSymbolProvider: new Variant.boolean (true),
-                    hoverProvider: new Variant.boolean (true)
+                    hoverProvider: new Variant.boolean (true),
+                    documentHighlightProvider : new Variant.boolean (true)
                 ),
                 serverInfo: build_dict (
                     name: new Variant.string ("Meson Language Server"),
@@ -161,11 +162,13 @@ namespace Meson {
 		}
 		public void document_symbol (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
-			var syms = this.tree.get_symbols (File.new_for_uri (p.textDocument.uri));
+			var syms = new Gee.ArrayList<DocumentSymbol>();
+			this.ast.document_symbols (File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path ()).get_path (), syms);
+			//var syms = this.tree.get_symbols (File.new_for_uri (p.textDocument.uri));
 			var array = new Json.Array ();
 			array.ref();
 			foreach (var sym in syms)
-				array.add_element (Json.gobject_serialize (sym.to_symbol ()));
+				array.add_element (Json.gobject_serialize (sym));
 			var ret = Json.gvariant_deserialize (new Json.Node.alloc ().init_array (array), null);
 			client.reply (id, ret);
 		}

@@ -28,14 +28,14 @@ namespace Meson {
 
 		internal SourceReference (string filename, TreeSitter.TSNode node) {
 			this.file = filename;
-			this.start_line = node.start_point().row;
-			this.start_column = node.start_point().column;
-			this.end_line = node.end_point().row;
-			this.end_column = node.end_point().column;
+			this.start_line = node.start_point ().row;
+			this.start_column = node.start_point ().column;
+			this.end_line = node.end_point ().row;
+			this.end_column = node.end_point ().column;
 		}
 
 		internal bool contains (string file, Position pos) {
-			//info ("Is %s(%u:%u) in %s(%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
+			info ("Is %s(%u:%u) in %s(%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
 			if (this.file != file)
 				return false;
 			var line_matches = pos.line >= this.start_line && pos.line <= this.end_line;
@@ -49,6 +49,19 @@ namespace Meson {
 				return false;
 			return true;
 		}
+
+		internal Range to_lsp_range () {
+			return new Range () {
+					   start = new Position () {
+						   line = this.start_line,
+						   character = this.start_column
+					   },
+					   end = new Position () {
+						   line = this.end_line,
+						   character = this.end_column
+					   }
+			};
+		}
 	}
 
 	class SourceFile {
@@ -58,7 +71,7 @@ namespace Meson {
 		internal static SourceFile build_ast (string data, string filename, TreeSitter.TSNode root) {
 			var ret = new SourceFile ();
 			ret.filename = filename;
-			if (root.named_child_count() == 0) {
+			if (root.named_child_count () == 0) {
 				info ("No build_definition found!");
 				return ret;
 			}
@@ -68,15 +81,21 @@ namespace Meson {
 			}
 			for (var i = 0; i < build_def.named_child_count (); i++) {
 				var stmt = build_def.named_child (i);
-				if (stmt.type() == "comment")
+				if (stmt.type () == "comment")
 					continue;
-				if (stmt.named_child_count () == 1 && stmt.named_child (0).type() == "comment")
+				if (stmt.named_child_count () == 1 && stmt.named_child (0).type () == "comment")
 					continue;
-				if (stmt.named_child_count() == 0)
+				if (stmt.named_child_count () == 0)
 					continue;
 				ret.statements.add (Statement.parse (data, filename, stmt));
 			}
 			return ret;
+		}
+
+		internal void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			foreach (var s in this.statements) {
+				s.document_symbols (path, into);
+			}
 		}
 
 		internal string? find_identifier (string file, Position pos) {
@@ -108,7 +127,7 @@ namespace Meson {
 
 	class Statement : CodeNode {
 		internal static Statement parse (string data, string filename, TreeSitter.TSNode tsn) {
-			if (tsn.type () != "statement" && tsn.type() != "comment") {
+			if (tsn.type () != "statement" && tsn.type () != "comment") {
 				var js = new JumpStatement ();
 				js.sref = new SourceReference (filename, tsn);
 				js.is_break = Util.get_string_value (data, tsn).strip () == "break";
@@ -125,11 +144,9 @@ namespace Meson {
 			case "iteration_statement":
 				return IterationStatement.parse (data, filename, child);
 			case "comment":
-				info ("COMMENT: %s", child.to_string ());
-				info ("COMMENT: %s", tsn.to_string ());
 				break;
 			}
-			critical ("Unknown thing: %s", child.type());
+			critical ("Unknown thing: %s", child.type ());
 			return null;
 		}
 	}
@@ -143,11 +160,23 @@ namespace Meson {
 		internal virtual Gee.List<SymbolDefinition> find_symbol (string name) {
 			return new Gee.ArrayList<SymbolDefinition>();
 		}
+
+		internal virtual void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+		}
 	}
 
 	class SelectionStatement : Statement {
-		Gee.List<Expression> conditions {get; set; default = new Gee.ArrayList<Expression>(); }
-		Gee.List<Gee.List<Statement>> blocks {get; set; default = new Gee.ArrayList<Gee.ArrayList<Statement>> (); }
+		Gee.List<Expression> conditions { get; set; default = new Gee.ArrayList<Expression>(); }
+		internal Gee.List<Gee.List<Statement> > blocks { get; set; default = new Gee.ArrayList<Gee.ArrayList<Statement> > (); }
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			foreach (var s in this.blocks) {
+				foreach (var s1 in s)
+					s1.document_symbols (path, into);
+			}
+			foreach (var e in this.conditions)
+				e.document_symbols (path, into);
+		}
 
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
 			var ret = new Gee.ArrayList<SymbolDefinition>();
@@ -155,12 +184,13 @@ namespace Meson {
 				foreach (var s in b)
 					ret.add_all (s.find_symbol (name));
 			}
+			foreach (var b in this.conditions) {
+				ret.add_all (b.find_symbol (name));
+			}
 			return ret;
 		}
 
 		internal override string? find_identifier (string file, Position pos) {
-			if (!this.sref.contains (file, pos))
-				return null;
 			foreach (var expr in this.conditions) {
 				var s = expr.find_identifier (file, pos);
 				if (s != null)
@@ -201,7 +231,7 @@ namespace Meson {
 				} else if (Util.get_string_value (data, c).strip () == "else") {
 					ret.blocks.add (tmp);
 					tmp = new Gee.ArrayList<Statement>();
-				} else if (c.type () == "statement" && (c.named_child_count () == 1 && c.named_child (0).type() != "comment")) {
+				} else if (c.type () == "statement" && (c.named_child_count () == 1 && c.named_child (0).type () != "comment")) {
 					tmp.add (Statement.parse (data, filename, c));
 				}
 			}
@@ -212,8 +242,17 @@ namespace Meson {
 
 	class IterationStatement : Statement {
 		internal Gee.List<Expression> identifiers { get; set; default = new Gee.ArrayList<Expression> (); }
+
 		internal Expression id;
 		internal Gee.List<Statement> statements { get; set; default = new Gee.ArrayList<Expression> (); }
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			foreach (var e in this.identifiers)
+				e.document_symbols (path, into);
+			this.id.document_symbols (path, into);
+			foreach (var e in this.statements)
+				e.document_symbols (path, into);
+		}
 
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
 			var ret = new Gee.ArrayList<SymbolDefinition>();
@@ -222,9 +261,9 @@ namespace Meson {
 			}
 			foreach (var i in this.identifiers) {
 				if (i is Identifier) {
-					var ii = (Identifier)i;
+					var ii = (Identifier) i;
 					if (ii.name == name) {
-						var sym = new SymbolDefinition();
+						var sym = new SymbolDefinition ();
 						sym.sref = i.sref;
 						sym.is_foreach = true;
 						sym.parent = this.sref;
@@ -234,6 +273,7 @@ namespace Meson {
 			}
 			return ret;
 		}
+
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
@@ -267,7 +307,7 @@ namespace Meson {
 				if (tsn.named_child (i).type () == "comment")
 					continue;
 				var stmt = tsn.named_child (i);
-				if (stmt.named_child_count () == 1 && stmt.named_child (0).type() == "comment")
+				if (stmt.named_child_count () == 1 && stmt.named_child (0).type () == "comment")
 					continue;
 				ret.statements.add (Statement.parse (data, filename, tsn.named_child (i)));
 			}
@@ -280,11 +320,16 @@ namespace Meson {
 		internal AssignmentOperator op;
 		internal Expression rhs;
 
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.lhs.document_symbols (path, into);
+			this.rhs.document_symbols (path, into);
+		}
+
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
 			var ret = new Gee.ArrayList<SymbolDefinition>();
 			if (!(this.lhs is Identifier))
 				return ret;
-			if (((Identifier)this.lhs).name != name)
+			if (((Identifier) this.lhs).name != name)
 				return ret;
 			// E.g. the code
 			// x = [] (1)
@@ -293,10 +338,10 @@ namespace Meson {
 			// Jump to (1)
 			if (this.op != AssignmentOperator.EQ)
 				return ret;
-			var sym = new SymbolDefinition();
+			var sym = new SymbolDefinition ();
 			sym.is_foreach = false;
 			sym.sref = this.lhs.sref;
-			ret.add(sym);
+			ret.add (sym);
 			return ret;
 		}
 
@@ -314,7 +359,7 @@ namespace Meson {
 
 
 		internal static new AssignmentStatement parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "assignment_statement");
+			assert (tsn.type () == "assignment_statement");
 			var ret = new AssignmentStatement ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.lhs = Expression.parse (data, filename, tsn.named_child (0));
@@ -359,47 +404,56 @@ namespace Meson {
 			if (tsn.named_child_count () == 0) {
 				if (tsn.type () == "id_expression")
 					return new Identifier (Util.get_string_value (data, tsn), filename, tsn);
-				critical ("%s %s (%u %u)", filename, tsn.type(), tsn.start_point().row, tsn.start_point().column );
+				critical ("%s %s (%u %u)", filename, tsn.type (), tsn.start_point ().row, tsn.start_point ().column);
 				assert_not_reached ();
 			}
 			switch (tsn.named_child (0).type ()) {
-				case "function_expression":
-					return FunctionExpression.parse (data, filename, tsn.named_child (0));
-				case "conditional_expression":
-					return ConditionalExpression.parse (data, filename, tsn.named_child (0));
-				case "unary_expression":
-					return UnaryExpression.parse (data, filename, tsn.named_child (0));
-				case "subscript_expression":
-					return ArrayAccessExpression.parse (data, filename, tsn.named_child (0));
-				case "method_expression":
-					return MethodExpression.parse (data, filename, tsn.named_child (0));
-				case "binary_expression":
-					return BinaryExpresssion.parse (data, filename, tsn.named_child (0));
-				case "integer_literal":
-					return IntegerLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
-				case "string_literal":
-					return StringLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
-				case "boolean_literal":
-					return BooleanLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
-				case "array_literal":
-					return ArrayLiteral.parse (data, filename, tsn.named_child (0));
-				case "dictionary_literal":
-					return DictionaryLiteral.parse (data, filename, tsn.named_child (0));
-				case "id_expression":
-				case "function_id":
-					return new Identifier (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
-				case "primary_expression":
-					if (tsn.named_child (0).child_count () == 1)
-						return new Identifier (Util.get_string_value (data, tsn.named_child (0).named_child (0)), filename, tsn.named_child (0).named_child (0));
-					return Expression.parse (data, filename, tsn.named_child (0).named_child (0));
-				default:
-					critical ("Unexpected: %s [%s; %u %u]", tsn.named_child (0).type (), tsn.named_child (0).to_string (), tsn.named_child (0).start_point ().row, tsn.named_child (0).start_point ().column);
-					assert_not_reached ();
+			case "function_expression":
+				return FunctionExpression.parse (data, filename, tsn.named_child (0));
+			case "conditional_expression":
+				return ConditionalExpression.parse (data, filename, tsn.named_child (0));
+			case "unary_expression":
+				return UnaryExpression.parse (data, filename, tsn.named_child (0));
+			case "subscript_expression":
+				return ArrayAccessExpression.parse (data, filename, tsn.named_child (0));
+			case "method_expression":
+				return MethodExpression.parse (data, filename, tsn.named_child (0));
+			case "binary_expression":
+				return BinaryExpresssion.parse (data, filename, tsn.named_child (0));
+			case "integer_literal":
+				return IntegerLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+			case "string_literal":
+				return StringLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+			case "boolean_literal":
+				return BooleanLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+			case "array_literal":
+				return ArrayLiteral.parse (data, filename, tsn.named_child (0));
+			case "dictionary_literal":
+				return DictionaryLiteral.parse (data, filename, tsn.named_child (0));
+			case "id_expression":
+			case "function_id":
+				return new Identifier (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+			case "primary_expression":
+				if (tsn.named_child (0).child_count () == 1)
+					return new Identifier (Util.get_string_value (data, tsn.named_child (0).named_child (0)), filename, tsn.named_child (0).named_child (0));
+				return Expression.parse (data, filename, tsn.named_child (0).named_child (0));
+			default:
+				critical ("Unexpected: %s [%s; %u %u]", tsn.named_child (0).type (), tsn.named_child (0).to_string (), tsn.named_child (0).start_point ().row, tsn.named_child (0).start_point ().column);
+				assert_not_reached ();
 			}
 		}
 	}
 
 	class Identifier : Expression {
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			var symbol = new DocumentSymbol ();
+			symbol.name = this.name;
+			symbol.kind = SymbolKind.Variable;
+			symbol.range = this.sref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
+
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
@@ -413,8 +467,8 @@ namespace Meson {
 	}
 
 	class DictionaryLiteral : Expression {
-		internal Gee.List<Expression> keys {get; set; default = new Gee.ArrayList<Expression> (); }
-		internal Gee.List<Expression> values {get; set; default = new Gee.ArrayList<Expression> (); }
+		internal Gee.List<Expression> keys { get; set; default = new Gee.ArrayList<Expression> (); }
+		internal Gee.List<Expression> values { get; set; default = new Gee.ArrayList<Expression> (); }
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -432,8 +486,8 @@ namespace Meson {
 			return null;
 		}
 		internal static new DictionaryLiteral parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "dictionary_literal");
-			var ret = new DictionaryLiteral();
+			assert (tsn.type () == "dictionary_literal");
+			var ret = new DictionaryLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
 				var kv = tsn.named_child (i);
@@ -445,7 +499,7 @@ namespace Meson {
 	}
 
 	class ArrayLiteral : Expression {
-		internal Gee.List<Expression> elements {get; set; default = new Gee.ArrayList<Expression> (); }
+		internal Gee.List<Expression> elements { get; set; default = new Gee.ArrayList<Expression> (); }
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
@@ -457,7 +511,7 @@ namespace Meson {
 			return null;
 		}
 		internal static new ArrayLiteral parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "array_literal");
+			assert (tsn.type () == "array_literal");
 			var ret = new ArrayLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
@@ -471,8 +525,18 @@ namespace Meson {
 
 	class IntegerLiteral : Expression {
 		internal int64 val;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			var symbol = new DocumentSymbol ();
+			symbol.kind = SymbolKind.Number;
+			symbol.name = null;
+			symbol.range = this.sref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
+
 		internal static new IntegerLiteral parse (string str, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "integer_literal");
+			assert (tsn.type () == "integer_literal");
 			var ret = new IntegerLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			if (str.has_prefix ("0x"))
@@ -489,8 +553,18 @@ namespace Meson {
 
 	class BooleanLiteral : Expression {
 		internal bool val;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			var symbol = new DocumentSymbol ();
+			symbol.kind = SymbolKind.Boolean;
+			symbol.name = null;
+			symbol.range = this.sref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
+
 		internal static new BooleanLiteral parse (string str, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "boolean_literal");
+			assert (tsn.type () == "boolean_literal");
 			var ret = new BooleanLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.val = str == "true";
@@ -500,8 +574,18 @@ namespace Meson {
 
 	class StringLiteral : Expression {
 		internal string val;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			var symbol = new DocumentSymbol ();
+			symbol.kind = SymbolKind.String;
+			symbol.name = null;
+			symbol.range = this.sref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
+
 		internal static new StringLiteral parse (string str, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "string_literal");
+			assert (tsn.type () == "string_literal");
 			var ret = new StringLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.val = str.has_prefix ("'''") ? str.replace ("'''", "") : str.substring (1, str.length - 2);
@@ -512,20 +596,36 @@ namespace Meson {
 	class MethodExpression : Expression {
 		internal Expression obj;
 		internal string name;
+		internal SourceReference name_ref;
 		internal ArgumentList? list;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.obj.document_symbols (path, into);
+			if (this.list != null)
+				this.list.document_symbols (path, into);
+			var symbol = new DocumentSymbol ();
+			symbol.kind = SymbolKind.Function;
+			symbol.name = null;
+			symbol.range = this.name_ref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
+			if (this.name_ref.contains (file, pos))
+				return this.name;
 			var s = this.obj.find_identifier (file, pos);
 			if (s != null)
 				return s;
 			return this.list == null ? null : this.list.find_identifier (file, pos);
 		}
 		internal static new MethodExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "method_expression");
+			assert (tsn.type () == "method_expression");
 			var ret = new MethodExpression ();
 			ret.sref = new SourceReference (filename, tsn);
+			ret.name_ref = new SourceReference (filename, tsn.named_child (1));
 			ret.obj = Expression.parse (data, filename, tsn.named_child (0));
 			ret.name = Util.get_string_value (data, tsn.named_child (1));
 			if (tsn.named_child_count () == 3)
@@ -538,6 +638,12 @@ namespace Meson {
 		internal Expression condition;
 		internal Expression if_true;
 		internal Expression if_false;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.condition.document_symbols (path, into);
+			this.if_true.document_symbols (path, into);
+			this.if_false.document_symbols (path, into);
+		}
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -552,7 +658,7 @@ namespace Meson {
 		}
 
 		internal static new ConditionalExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "conditional_expression");
+			assert (tsn.type () == "conditional_expression");
 			var ret = new ConditionalExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.condition = Expression.parse (data, filename, tsn.named_child (0));
@@ -564,6 +670,18 @@ namespace Meson {
 	class FunctionExpression : Expression {
 		internal string name;
 		internal ArgumentList? arg_list;
+		internal SourceReference name_ref;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			if (this.arg_list != null)
+				this.arg_list.document_symbols (path, into);
+			var symbol = new DocumentSymbol ();
+			symbol.kind = SymbolKind.Function;
+			symbol.name = null;
+			symbol.range = this.name_ref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -572,8 +690,9 @@ namespace Meson {
 		}
 
 		internal static new FunctionExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "function_expression");
+			assert (tsn.type () == "function_expression");
 			var ret = new FunctionExpression ();
+			ret.name_ref = new SourceReference (data, tsn.named_child (0));
 			ret.sref = new SourceReference (filename, tsn);
 			ret.name = Util.get_string_value (data, tsn.named_child (0));
 			if (tsn.named_child_count () == 2) {
@@ -583,7 +702,7 @@ namespace Meson {
 		}
 	}
 	class ArgumentList : Expression {
-		internal Gee.List<Expression> args {get; set; default = new Gee.ArrayList<Expression> (); }
+		internal Gee.List<Expression> args { get; set; default = new Gee.ArrayList<Expression> (); }
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -596,7 +715,7 @@ namespace Meson {
 			return null;
 		}
 		internal static new ArgumentList parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "argument_list");
+			assert (tsn.type () == "argument_list");
 			var ret = new ArgumentList ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
@@ -612,7 +731,18 @@ namespace Meson {
 	}
 	class KeywordArgument : Expression {
 		internal string name;
+		internal SourceReference key_ref;
 		internal Expression inner;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.inner.document_symbols (path, into);
+			var symbol = new DocumentSymbol ();
+			symbol.kind = SymbolKind.Key;
+			symbol.name = null;
+			symbol.range = this.key_ref.to_lsp_range ();
+			if (this.sref.file == path)
+				into.add (symbol);
+		}
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -621,9 +751,10 @@ namespace Meson {
 		}
 
 		internal static new KeywordArgument parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "keyword_item");
+			assert (tsn.type () == "keyword_item");
 			var ret = new KeywordArgument ();
 			ret.sref = new SourceReference (filename, tsn);
+			ret.key_ref = new SourceReference (filename, tsn.named_child (0));
 			ret.name = Util.get_string_value (data, tsn.named_child (0));
 			ret.inner = Expression.parse (data, filename, tsn.named_child (1));
 			return ret;
@@ -633,6 +764,11 @@ namespace Meson {
 		internal Expression rhs;
 		internal Expression lhs;
 		internal BinaryOperator op;
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.lhs.document_symbols (path, into);
+			this.rhs.document_symbols (path, into);
+		}
 
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -644,59 +780,59 @@ namespace Meson {
 		}
 
 		internal static new BinaryExpresssion parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "binary_expression");
+			assert (tsn.type () == "binary_expression");
 			var ret = new BinaryExpresssion ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.lhs = Expression.parse (data, filename, tsn.named_child (0));
 			var op = tsn.named_child_count () == 2 ? tsn.named_child (1) : tsn.child (1);
 			switch (Util.get_string_value (data, op).strip ()) {
-				case "+":
-					ret.op = BinaryOperator.PLUS;
-					break;
-				case "-":
-					ret.op = BinaryOperator.MINUS;
-					break;
-				case "*":
-					ret.op = BinaryOperator.STAR;
-					break;
-				case "/":
-					ret.op = BinaryOperator.SLASH;
-					break;
-				case "%":
-					ret.op = BinaryOperator.MOD;
-					break;
-				case "==":
-					ret.op = BinaryOperator.EQ_EQ;
-					break;
-				case "!=":
-					ret.op = BinaryOperator.N_EQ;
-					break;
-				case ">":
-					ret.op = BinaryOperator.GT;
-					break;
-				case "<":
-					ret.op = BinaryOperator.LT;
-					break;
-				case ">=":
-					ret.op = BinaryOperator.GE;
-					break;
-				case "<=":
-					ret.op = BinaryOperator.LE;
-					break;
-				case "in":
-					ret.op = BinaryOperator.IN;
-					break;
-				case "not in":
-					ret.op = BinaryOperator.NOT_IN;
-					break;
-				case "or":
-					ret.op = BinaryOperator.OR;
-					break;
-				case "and":
-					ret.op = BinaryOperator.AND;
-					break;
+			case "+":
+				ret.op = BinaryOperator.PLUS;
+				break;
+			case "-":
+				ret.op = BinaryOperator.MINUS;
+				break;
+			case "*":
+				ret.op = BinaryOperator.STAR;
+				break;
+			case "/":
+				ret.op = BinaryOperator.SLASH;
+				break;
+			case "%":
+				ret.op = BinaryOperator.MOD;
+				break;
+			case "==":
+				ret.op = BinaryOperator.EQ_EQ;
+				break;
+			case "!=":
+				ret.op = BinaryOperator.N_EQ;
+				break;
+			case ">":
+				ret.op = BinaryOperator.GT;
+				break;
+			case "<":
+				ret.op = BinaryOperator.LT;
+				break;
+			case ">=":
+				ret.op = BinaryOperator.GE;
+				break;
+			case "<=":
+				ret.op = BinaryOperator.LE;
+				break;
+			case "in":
+				ret.op = BinaryOperator.IN;
+				break;
+			case "not in":
+				ret.op = BinaryOperator.NOT_IN;
+				break;
+			case "or":
+				ret.op = BinaryOperator.OR;
+				break;
+			case "and":
+				ret.op = BinaryOperator.AND;
+				break;
 			}
-			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count() == 2 ? 1 : 2));
+			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count () == 2 ? 1 : 2));
 			return ret;
 		}
 	}
@@ -707,6 +843,10 @@ namespace Meson {
 		internal Expression rhs;
 		internal UnaryOperator op;
 
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.rhs.document_symbols (path, into);
+		}
+
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
@@ -714,20 +854,20 @@ namespace Meson {
 		}
 
 		internal static new UnaryExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "unary_expression");
+			assert (tsn.type () == "unary_expression");
 			var ret = new UnaryExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.rhs = Expression.parse (data, filename, tsn.named_child (0));
 			switch (Util.get_string_value (data, tsn.child (0)).strip ()) {
-				case "not":
-					ret.op = UnaryOperator.NOT;
-					break;
-				case "!":
-					ret.op = UnaryOperator.EXCLAMATION_MARK;
-					break;
-				case "-":
-					ret.op = UnaryOperator.MINUS;
-					break;
+			case "not":
+				ret.op = UnaryOperator.NOT;
+				break;
+			case "!":
+				ret.op = UnaryOperator.EXCLAMATION_MARK;
+				break;
+			case "-":
+				ret.op = UnaryOperator.MINUS;
+				break;
 			}
 			return ret;
 		}
@@ -741,7 +881,12 @@ namespace Meson {
 		// outer[inner]
 		internal Expression inner;
 		internal Expression outer;
-		
+
+		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
+			this.inner.document_symbols (path, into);
+			this.outer.document_symbols (path, into);
+		}
+
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
 				return null;
@@ -752,7 +897,7 @@ namespace Meson {
 		}
 
 		internal static new ArrayAccessExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
-			assert (tsn.type() == "subscript_expression");
+			assert (tsn.type () == "subscript_expression");
 			var ret = new ArrayAccessExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.outer = Expression.parse (data, filename, tsn.named_child (0));

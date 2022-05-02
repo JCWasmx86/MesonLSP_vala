@@ -20,17 +20,17 @@
 
 namespace Meson {
 	class SymbolTree : Data {
-		internal Gee.List<Data> datas {get; set; default = new Gee.ArrayList<Data>(); }
-		internal Gee.HashMap<string, string> patches {get; set; default = new Gee.HashMap<string, string>(); }
+		internal Gee.List<Data> datas { get; set; default = new Gee.ArrayList<Data>(); }
+		internal Gee.Map<string, string> patches { get; set; default = new Gee.HashMap<string, string>(); }
 		internal string filename;
 		internal SourceFile? file;
 		internal Gee.List<Symbol> flatten () {
 			var ret = new Gee.ArrayList<Symbol> ();
 			foreach (var data in this.datas) {
 				if (data is Symbol)
-					ret.add (((Symbol)data));
+					ret.add (((Symbol) data));
 				else if (data is SymbolTree)
-					ret.add_all (((SymbolTree)data).flatten ());
+					ret.add_all (((SymbolTree) data).flatten ());
 			}
 			return ret;
 		}
@@ -40,7 +40,7 @@ namespace Meson {
 				var ret = new Gee.ArrayList<Symbol> ();
 				foreach (var data in this.datas) {
 					if (data is Symbol) {
-						var s = (Symbol)data;
+						var s = (Symbol) data;
 						ret.add (s);
 					}
 				}
@@ -48,7 +48,7 @@ namespace Meson {
 			}
 			foreach (var data in this.datas) {
 				if (data is SymbolTree) {
-					var s = ((SymbolTree)data).get_symbols (file);
+					var s = ((SymbolTree) data).get_symbols (file);
 					if (s != null)
 						return s;
 				}
@@ -56,37 +56,49 @@ namespace Meson {
 			return null;
 		}
 
+		void analyze_ast_stmt (Gee.List<Statement> to_insert, Statement stmt, ref int i) {
+			if (stmt is FunctionExpression && ((FunctionExpression) stmt).name == "subdir") {
+				var arg_list = ((FunctionExpression) stmt).arg_list;
+				if (arg_list == null || arg_list.args.size == 0)
+					return;
+				var arg = arg_list.args[0];
+				if (arg is StringLiteral) {
+					info ("Found call to subdir: %s", ((StringLiteral) arg).val);
+					var found = false;
+					foreach (var data in this.datas) {
+						if (found) {
+							assert (data is SymbolTree);
+							var s = ((SymbolTree) data).merge ();
+							to_insert.insert_all (i, s.statements);
+							i += s.statements.size;
+							break;
+						}
+						if (data is Subdir && ((Subdir) data).name == ((StringLiteral) arg).val) {
+							found = true;
+						}
+					}
+				}
+			} else if (stmt is SelectionStatement) {
+				var sst = (SelectionStatement)stmt;
+				foreach (var block in sst.blocks) {
+					for (var j = 0; j < block.size; j++) {
+						this.analyze_ast_stmt (block, block[j], ref j);
+					}
+				}
+			}
+			// Iteration statements will blow up, no matter what I will do
+		}
+
 		internal SourceFile merge () {
 			info ("Merging: %s", this.filename);
 			for (var i = 0; i < this.file.statements.size; i++) {
 				var stmt = this.file.statements[i];
-				if (stmt is FunctionExpression && ((FunctionExpression)stmt).name == "subdir") {
-					var arg_list = ((FunctionExpression)stmt).arg_list;
-					if (arg_list == null || arg_list.args.size == 0)
-						continue;
-					var arg = arg_list.args[0];
-					if (arg is StringLiteral) {
-						info ("Found call to subdir: %s", ((StringLiteral)arg).val);
-						var found = false;
-						foreach (var data in this.datas) {
-							if (found) {
-								assert (data is SymbolTree);
-								var s = ((SymbolTree)data).merge ();
-								this.file.statements.insert_all (i, s.statements);
-								i += s.statements.size;
-								break;
-							}
-							if (data is Subdir && ((Subdir)data).name == ((StringLiteral)arg).val) {
-								found = true;
-							}
-						}
-					}
-				}
+				analyze_ast_stmt (this.file.statements, stmt, ref i);
 			}
 			return this.file;
 		}
 
-		public static SymbolTree build (Uri uri, Gee.HashMap<string, string> patches) {
+		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches) {
 			var ret = new SymbolTree ();
 			ret.patches = patches;
 			var file = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), "meson.build");
@@ -101,14 +113,13 @@ namespace Meson {
 			size_t data_length = 0;
 			if (patches.has_key (file.get_uri ())) {
 				data = patches[file.get_uri ()];
-				data_length = data.size ();
+				data_length = data.length;
 			} else
 				FileUtils.get_contents (file.get_path (), out data, out data_length);
-			var root = ps.parse_string (null, data + "\n", (uint32)data_length + 1).root_node ();
-			//info ("%s", root.to_string ());
+			var root = ps.parse_string (null, data + "\n", (uint32) data_length + 1).root_node ();
 			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root);
 			assert (ret.file != null);
-			if (root.named_child_count() == 0)
+			if (root.named_child_count () == 0)
 				return ret;
 			var build_def = root.named_child (0);
 			if (build_def.type () != "build_definition") {
@@ -120,47 +131,58 @@ namespace Meson {
 				var stmt = build_def.named_child (i);
 				if (stmt.type () != "statement")
 					continue;
-				for (var j = 0; j < stmt.named_child_count (); j++) {
-					var s = stmt.named_child (j);
-					if (s.named_child_count () == 0)
-						continue;
-					if (s.type () != "expression" && s.type () != "assignment_statement")
-						continue;
-					if (s.type () == "expression") {
-						if (s.named_child (0).type () == "function_expression") {
-							var fe = s.named_child (0).named_child (0);
-							var name = data.substring (fe.start_byte (), fe.end_byte () - fe.start_byte ());
-							if (name == "subdir") {
-								var str_literal = s.named_child (0).named_child (1).named_child (0).named_child (0).named_child (0);
-								var str = data.substring (str_literal.start_byte () + 1, str_literal.end_byte () - str_literal.start_byte () - 2);
-								info ("Found subdir: %s", str);
-								var sd = new Subdir ();
-								sd.name = str;
-								ret.datas.add (sd);
-								var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
-								var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches);
-								assert (st.file != null);
-								ret.datas.add (st);
-							}
-						}
-					} else if (s.type () == "assignment_statement") {
-						var name = s.named_child (0).named_child (0).named_child (0);
-						var var_name = data.substring (name.start_byte (), name.end_byte () - name.start_byte ());
-						var symbol = new Symbol ();
-						symbol.name = var_name;
-						symbol.file = file.get_path ();
-						symbol.start = new uint[]{name.start_point ().row, name.start_point ().column};
-						symbol.end = new uint[]{name.end_point ().row, name.end_point ().column};
-						ret.datas.add (symbol);
-						info ("Variable: %s", var_name);
-					}
-				}
+				analyze_statement (stmt, ret, uri, file, data, patches);
 			}
 			return ret;
 		}
+
+		static void analyze_statement (TreeSitter.TSNode stmt, SymbolTree ret, Uri uri, File file, string data, Gee.Map<string, string> patches) {
+			for (var j = 0; j < stmt.named_child_count (); j++) {
+				var s = stmt.named_child (j);
+				if (s.named_child_count () == 0)
+					continue;
+				if (s.type () == "expression") {
+					if (s.named_child (0).type () == "function_expression") {
+						var fe = s.named_child (0).named_child (0);
+						var name = data.substring (fe.start_byte (), fe.end_byte () - fe.start_byte ());
+						if (name == "subdir") {
+							var str_literal = s.named_child (0).named_child (1).named_child (0).named_child (0).named_child (0);
+							var str = data.substring (str_literal.start_byte () + 1, str_literal.end_byte () - str_literal.start_byte () - 2);
+							info ("Found subdir: %s", str);
+							var sd = new Subdir ();
+							sd.name = str;
+							ret.datas.add (sd);
+							var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
+							var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches);
+							assert (st.file != null);
+							ret.datas.add (st);
+						}
+					}
+				} else if (s.type () == "assignment_statement") {
+					var name = s.named_child (0).named_child (0).named_child (0);
+					var var_name = data.substring (name.start_byte (), name.end_byte () - name.start_byte ());
+					var symbol = new Symbol ();
+					symbol.name = var_name;
+					symbol.file = file.get_path ();
+					symbol.start = new uint[] { name.start_point ().row, name.start_point ().column };
+					symbol.end = new uint[] { name.end_point ().row, name.end_point ().column };
+					ret.datas.add (symbol);
+					info ("Variable: %s", var_name);
+				} else if (s.type () == "iteration_statement") {
+					for (var i = 3; i < s.named_child_count (); i++) {
+						analyze_statement (s.named_child (i), ret, uri, file, data, patches);
+					}
+				} else if (s.type () == "selection_statement") {
+					for (var i = 0; i < s.named_child_count (); i++) {
+						if (s.named_child (i).type () != "statement")
+							continue;
+						analyze_statement (s.named_child (i), ret, uri, file, data, patches);
+					}
+				}
+			}
+		}
 	}
 	abstract class Data : GLib.Object {
-
 	}
 
 	internal class Symbol : Data {

@@ -55,7 +55,7 @@ namespace Meson {
     }
 
     class DocumentSymbol : Object, Json.Serializable {
-        public string name { get; set; }
+        public string? name { get; set; }
         public string? detail { get; set; }
         public int kind { get; set; }
         public bool deprecated { get; set; }

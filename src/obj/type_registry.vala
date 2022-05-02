@@ -22,7 +22,6 @@ namespace Meson {
 	internal class TypeRegistry {
 		internal Gee.List<MesonType> types;
 		internal void init () {
-			// TODO: Register types first and then add objects
 			this.types = new Gee.ArrayList<MesonType>();
 			this.register_type ("tgt", "");
 			this.register_type ("compiler", "");
