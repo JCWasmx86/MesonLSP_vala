@@ -307,8 +307,11 @@ namespace Meson {
 				if (tsn.named_child (i).type () == "comment")
 					continue;
 				var stmt = tsn.named_child (i);
+				if (stmt.named_child_count () == 0)
+					continue;
 				if (stmt.named_child_count () == 1 && stmt.named_child (0).type () == "comment")
 					continue;
+				info ("%s %u %u", tsn.named_child (i).to_string(), tsn.named_child(i).start_point().row, tsn.named_child(i).start_point().column);
 				ret.statements.add (Statement.parse (data, filename, tsn.named_child (i)));
 			}
 			return ret;

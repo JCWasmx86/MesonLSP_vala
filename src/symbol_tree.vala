@@ -170,6 +170,8 @@ namespace Meson {
 					info ("Variable: %s", var_name);
 				} else if (s.type () == "iteration_statement") {
 					for (var i = 3; i < s.named_child_count (); i++) {
+						if (s.named_child (i).type () != "statement")
+							continue;
 						analyze_statement (s.named_child (i), ret, uri, file, data, patches);
 					}
 				} else if (s.type () == "selection_statement") {
