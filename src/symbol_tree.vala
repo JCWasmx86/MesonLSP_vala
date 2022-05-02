@@ -21,6 +21,7 @@
 namespace Meson {
 	class SymbolTree : Data {
 		internal Gee.List<Data> datas {get; set; default = new Gee.ArrayList<Data>(); }
+		internal Gee.HashMap<string, string> patches {get; set; default = new Gee.HashMap<string, string>(); }
 		internal string filename;
 		internal SourceFile? file;
 		internal Gee.List<Symbol> flatten () {
@@ -85,8 +86,9 @@ namespace Meson {
 			return this.file;
 		}
 
-		public static SymbolTree build (Uri uri) {
+		public static SymbolTree build (Uri uri, Gee.HashMap<string, string> patches) {
 			var ret = new SymbolTree ();
+			ret.patches = patches;
 			var file = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), "meson.build");
 			if (!file.query_exists ())
 				return ret;
@@ -97,11 +99,17 @@ namespace Meson {
 			ps.set_language (lang);
 			var data = "";
 			size_t data_length = 0;
-			FileUtils.get_contents (file.get_path (), out data, out data_length);
+			if (patches.has_key (file.get_uri ())) {
+				data = patches[file.get_uri ()];
+				data_length = data.size ();
+			} else
+				FileUtils.get_contents (file.get_path (), out data, out data_length);
 			var root = ps.parse_string (null, data + "\n", (uint32)data_length + 1).root_node ();
 			info ("%s", root.to_string ());
 			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root);
 			assert (ret.file != null);
+			if (root.named_child_count() == 0)
+				return ret;
 			var build_def = root.named_child (0);
 			if (build_def.type () != "build_definition") {
 				info ("Unexpected type: %s", build_def.type ());
@@ -130,7 +138,7 @@ namespace Meson {
 								sd.name = str;
 								ret.datas.add (sd);
 								var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
-								var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE));
+								var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches);
 								assert (st.file != null);
 								ret.datas.add (st);
 							}

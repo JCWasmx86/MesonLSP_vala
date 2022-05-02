@@ -99,4 +99,11 @@ namespace Meson {
 		public string uri { get; set; }
 		public Range range { get; set; }
 	}
+
+	class TextDocumentContentChangeEvent : Object {
+        public Range? range    { get; set; }
+        public int rangeLength { get; set; }
+        public string text     { get; set; }
+    }
+
 }

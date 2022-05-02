@@ -30,7 +30,20 @@ namespace Meson {
 			tr.init ();
 		}
 
-		protected override bool handle_call (Jsonrpc.Client client, string method, Variant id, Variant parameters){
+		protected override void notification (Jsonrpc.Client client, string method, Variant parameters) {
+			info ("Received notification %s", method);
+			switch (method) {
+				case "textDocument/didChange":
+					this.did_change (parameters);
+					break;
+				case "textDocument/didSave":
+					this.did_save (parameters);
+					break;
+			}
+		}
+
+		protected override bool handle_call (Jsonrpc.Client client, string method, Variant id, Variant parameters) {
+			info ("Received call %s", method);
 		    switch (method) {
 		        case "initialize":
 		            this.initialize (client, id, parameters);
@@ -45,13 +58,43 @@ namespace Meson {
 			return true;
 		}
 
+		void did_change (Variant @params) {
+			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
+			var changes = @params.lookup_value ("contentChanges", VariantType.ARRAY);
+			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
+			var iter = changes.iterator ();
+			var elem = iter.next_value ();
+			if (elem == null) {
+				info ("No changes given!");
+				return;
+			} else if (iter.next_value () != null) {
+				info ("Only one big change is supported (The whole file)");
+				return;
+			}
+			var ce = Util.parse_variant<TextDocumentContentChangeEvent> (elem);
+			var patches = new Gee.HashMap<string, string>();
+			patches.set_all (this.tree.patches);
+			// Override other changes
+			patches[uri] = ce.text + "\n\n\n";
+			this.load_tree (this.base_uri, patches);
+		}
+		
+		void did_save (Variant @params) {
+			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
+			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
+			var patches = new Gee.HashMap<string, string>();
+			patches.set_all (this.tree.patches);
+			patches.unset(uri);
+			this.load_tree (this.base_uri, patches);
+		}
+
 		void initialize (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var init = Util.parse_variant<InitializeParams> (@params);
-			warning ("HERE!!!");
 			this.base_uri = Uri.parse (init.rootUri, UriFlags.NONE);
 			this.load_tree (this.base_uri);
 			client.reply (id, build_dict (
                 capabilities: build_dict (
+                	textDocumentSync : new Variant.int32 (1 /* Full*/),
                     documentSymbolProvider: new Variant.boolean (true),
                     hoverProvider: new Variant.boolean (true)
                 ),
@@ -66,7 +109,6 @@ namespace Meson {
 			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
 			// First find the identifier to look for
 			var symbol_name = this.ast.find_identifier (p.get_file(), p.position);
-			var ret = (Location) null;
 			if (symbol_name == null) {
 				client.reply (id, null);
 				return;
@@ -102,7 +144,7 @@ namespace Meson {
 				return 0;
 			});
 			var first_good = found[0];
-			info ("Found first good: %s (%u %u)", first_good.sref.file, first_good.sref.start_line, first_good.sref.start_column);
+			info ("Found good reference: %s (%u %u)", first_good.sref.file, first_good.sref.start_line, first_good.sref.start_column);
 			var location = new Location ();
 			location.uri = File.new_for_path (first_good.sref.file).get_uri();
 			location.range = new Range () {
@@ -128,9 +170,12 @@ namespace Meson {
 			client.reply (id, ret);
 		}
 
-		internal void load_tree (Uri dir) throws GLib.Error {
-			this.tree = SymbolTree.build (dir);
+		internal void load_tree (Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>() ) throws GLib.Error {
+			var start = GLib.get_real_time () / 1000.0;
+			this.tree = SymbolTree.build (dir, patches);
 			this.ast = this.tree.merge ();
+			var end = GLib.get_real_time () / 1000.0;
+			info ("Built tree in %lfms", (end-start));
 		}
 		public Variant build_dict (...) {
 		    var builder = new VariantBuilder (new VariantType ("a{sv}"));

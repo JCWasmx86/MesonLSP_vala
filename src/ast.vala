@@ -58,6 +58,10 @@ namespace Meson {
 		internal static SourceFile build_ast (string data, string filename, TreeSitter.TSNode root) {
 			var ret = new SourceFile ();
 			ret.filename = filename;
+			if (root.named_child_count() == 0) {
+				info ("No build_definition found!");
+				return ret;
+			}
 			var build_def = root.named_child (0);
 			if (build_def.type () != "build_definition") {
 				return ret;
@@ -353,6 +357,7 @@ namespace Meson {
 			if (tsn.named_child_count () == 0) {
 				if (tsn.type () == "id_expression")
 					return new Identifier (Util.get_string_value (data, tsn), filename, tsn);
+				critical ("%s %s (%u %u)", filename, tsn.type(), tsn.start_point().row, tsn.start_point().column );
 				assert_not_reached ();
 			}
 			switch (tsn.named_child (0).type ()) {
