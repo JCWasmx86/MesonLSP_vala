@@ -108,6 +108,7 @@ namespace Meson {
 
 		public void definition (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
+			var start = GLib.get_real_time () / 1000.0;
 			// First find the identifier to look for
 			var symbol_name = this.ast.find_identifier (p.get_file(), p.position);
 			if (symbol_name == null) {
@@ -144,6 +145,8 @@ namespace Meson {
 					return 1;
 				return 0;
 			});
+			var end = GLib.get_real_time () / 1000.0;
+			info ("Searched tree for textDocment/definition in %lfms", (end-start));
 			var first_good = found[0];
 			info ("Found good reference: %s (%u %u)", first_good.sref.file, first_good.sref.start_line, first_good.sref.start_column);
 			var location = new Location ();
@@ -163,8 +166,10 @@ namespace Meson {
 		public void document_symbol (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
 			var syms = new Gee.ArrayList<DocumentSymbol>();
+			var start = GLib.get_real_time () / 1000.0;
 			this.ast.document_symbols (File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path ()).get_path (), syms);
-			//var syms = this.tree.get_symbols (File.new_for_uri (p.textDocument.uri));
+			var end = GLib.get_real_time () / 1000.0;
+			info ("Searched tree for textDocment/documentSymbol in %lfms", (end-start));
 			var array = new Json.Array ();
 			array.ref();
 			foreach (var sym in syms)

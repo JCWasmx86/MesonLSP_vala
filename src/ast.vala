@@ -35,7 +35,7 @@ namespace Meson {
 		}
 
 		internal bool contains (string file, Position pos) {
-			info ("Is %s(%u:%u) in %s(%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
+			// info ("Is %s(%u:%u) in %s(%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
 			if (this.file != file)
 				return false;
 			var line_matches = pos.line >= this.start_line && pos.line <= this.end_line;
@@ -311,7 +311,6 @@ namespace Meson {
 					continue;
 				if (stmt.named_child_count () == 1 && stmt.named_child (0).type () == "comment")
 					continue;
-				info ("%s %u %u", tsn.named_child (i).to_string(), tsn.named_child(i).start_point().row, tsn.named_child(i).start_point().column);
 				ret.statements.add (Statement.parse (data, filename, tsn.named_child (i)));
 			}
 			return ret;
@@ -324,22 +323,23 @@ namespace Meson {
 		internal Expression rhs;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
-			this.lhs.document_symbols (path, into);
+			if (this.op == AssignmentOperator.EQ)
+				this.lhs.document_symbols (path, into);
 			this.rhs.document_symbols (path, into);
 		}
 
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
 			var ret = new Gee.ArrayList<SymbolDefinition>();
-			if (!(this.lhs is Identifier))
-				return ret;
-			if (((Identifier) this.lhs).name != name)
-				return ret;
 			// E.g. the code
 			// x = [] (1)
 			// x += 'foo.c' (2)
 			// do_with(x)
 			// Jump to (1)
 			if (this.op != AssignmentOperator.EQ)
+				return ret;
+			if (!(this.lhs is Identifier))
+				return ret;
+			if (((Identifier) this.lhs).name != name)
 				return ret;
 			var sym = new SymbolDefinition ();
 			sym.is_foreach = false;
