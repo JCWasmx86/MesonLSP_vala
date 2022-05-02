@@ -18,6 +18,7 @@ An experimental, *WIP* implementation of a meson language server
 	- Performance improvements
 	- Type deduction/linting
 	- Make it live together with Vala-Language-Server
+	- Improve code quality
 
 ## Legal
 	- Parser from https://github.com/bearcove/tree-sitter-meson (MIT) with my own changes (JCWasmx86/tree-sitter-meson)
