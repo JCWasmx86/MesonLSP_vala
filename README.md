@@ -2,6 +2,17 @@
 
 An experimental, *WIP* implementation of a meson language server
 
+
+## Dependencies
+
+- glib-2.0
+- gobject-2.0
+- jsonrpc-glib-1.0
+- gee-0.8
+- gio-unix-2.0
+- gio-2.0
+- vala
+
 ## Installation
 
 Only GNOME-Builder is supported at the moment
