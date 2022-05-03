@@ -20,90 +20,89 @@
 
 namespace Meson {
 	class InitializeParams : Object {
-        public int processId { get; set; }
-        public string? rootPath { get; set; }
-        public string? rootUri { get; set; }
-        public ClientCapabilities capabilities { get; set; default = new ClientCapabilities (); }
-    }
-    class ClientCapabilities : Object {
-        public TextDocumentClientCapabilities textDocument { get; set; default = new TextDocumentClientCapabilities (); }
-    }
-    class TextDocumentClientCapabilities : Object {
-        public DocumentSymbolCapabilities documentSymbol { get; set; default = new DocumentSymbolCapabilities ();}
-        public RenameClientCapabilities rename { get; set; default = new RenameClientCapabilities (); }
-    }
+		public int processId { get; set; }
+		public string? rootPath { get; set; }
+		public string? rootUri { get; set; }
+		public ClientCapabilities capabilities { get; set; default = new ClientCapabilities (); }
+	}
+	class ClientCapabilities : Object {
+		public TextDocumentClientCapabilities textDocument { get; set; default = new TextDocumentClientCapabilities (); }
+	}
+	class TextDocumentClientCapabilities : Object {
+		public DocumentSymbolCapabilities documentSymbol { get; set; default = new DocumentSymbolCapabilities (); }
+		public RenameClientCapabilities rename { get; set; default = new RenameClientCapabilities (); }
+	}
 	class RenameClientCapabilities : Object {
-        public bool prepareSupport { get; set; }
-    }
-    class DocumentSymbolCapabilities : Object {
-        public bool hierarchicalDocumentSymbolSupport { get; set; }
-    }
-    class TextDocumentPositionParams : Object {
-        public TextDocumentIdentifier textDocument { get; set; }
-        public Position position { get; set; }
+		public bool prepareSupport { get; set; }
+	}
+	class DocumentSymbolCapabilities : Object {
+		public bool hierarchicalDocumentSymbolSupport { get; set; }
+	}
+	class TextDocumentPositionParams : Object {
+		public TextDocumentIdentifier textDocument { get; set; }
+		public Position position { get; set; }
 
-        internal string get_file () {
-        	return Uri.parse (this.textDocument.uri, UriFlags.NONE).get_path();
-        }
-    }
-    class TextDocumentIdentifier : Object {
-        public string uri { get; set; }
-    }
-    class Position : Object {
-        public uint line { get; set; default = -1; }
-        public uint character { get; set; default = -1; }
-    }
+		internal string get_file () {
+			return Uri.parse (this.textDocument.uri, UriFlags.NONE).get_path ();
+		}
+	}
+	class TextDocumentIdentifier : Object {
+		public string uri { get; set; }
+	}
+	class Position : Object {
+		public uint line { get; set; default = -1; }
+		public uint character { get; set; default = -1; }
+	}
 
-    class DocumentSymbol : Object, Json.Serializable {
-        public string? name { get; set; }
-        public string? detail { get; set; }
-        public int kind { get; set; }
-        public bool deprecated { get; set; }
-        public Range range {get; set;}
-    }
-    [CCode (default_value = "MESON_SYMBOL_KIND_Variable")]
-    enum SymbolKind {
-        File = 1,
-        Module = 2,
-        Namespace = 3,
-        Package = 4,
-        Class = 5,
-        Method = 6,
-        Property = 7,
-        Field = 8,
-        Constructor = 9,
-        Enum = 10,
-        Interface = 11,
-        Function = 12,
-        Variable = 13,
-        Constant = 14,
-        String = 15,
-        Number = 16,
-        Boolean = 17,
-        Array = 18,
-        Object = 19,
-        Key = 20,
-        Null = 21,
-        EnumMember = 22,
-        Struct = 23,
-        Event = 24,
-        Operator = 25,
-        TypeParameter = 26
-    }
-    class Range : Object {
-        public Position start { get; set; }
-        public Position end { get; set; }
-    }
+	class DocumentSymbol : Object, Json.Serializable {
+		public string? name { get; set; }
+		public string? detail { get; set; }
+		public int kind { get; set; }
+		public bool deprecated { get; set; }
+		public Range range { get; set; }
+	}
+	[CCode (default_value = "MESON_SYMBOL_KIND_Variable")]
+	enum SymbolKind {
+		File = 1,
+		Module = 2,
+		Namespace = 3,
+		Package = 4,
+		Class = 5,
+		Method = 6,
+		Property = 7,
+		Field = 8,
+		Constructor = 9,
+		Enum = 10,
+		Interface = 11,
+		Function = 12,
+		Variable = 13,
+		Constant = 14,
+		String = 15,
+		Number = 16,
+		Boolean = 17,
+		Array = 18,
+		Object = 19,
+		Key = 20,
+		Null = 21,
+		EnumMember = 22,
+		Struct = 23,
+		Event = 24,
+		Operator = 25,
+		TypeParameter = 26
+	}
+	class Range : Object {
+		public Position start { get; set; }
+		public Position end { get; set; }
+	}
 
-    class Location : Object {
+	class Location : Object {
 		public string uri { get; set; }
 		public Range range { get; set; }
 	}
 
 	class TextDocumentContentChangeEvent : Object {
-        public Range? range    { get; set; }
-        public int rangeLength { get; set; }
-        public string text     { get; set; }
-    }
-
+		public Range? range    { get; set; }
+		public int rangeLength { get; set; }
+		public string text     { get; set; }
+	}
 }

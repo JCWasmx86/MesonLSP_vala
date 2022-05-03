@@ -33,27 +33,27 @@ namespace Meson {
 		protected override void notification (Jsonrpc.Client client, string method, Variant parameters) {
 			info ("Received notification %s", method);
 			switch (method) {
-				case "textDocument/didChange":
-					this.did_change (parameters);
-					break;
-				case "textDocument/didSave":
-					this.did_save (parameters);
-					break;
+			case "textDocument/didChange":
+				this.did_change (parameters);
+				break;
+			case "textDocument/didSave":
+				this.did_save (parameters);
+				break;
 			}
 		}
 
 		protected override bool handle_call (Jsonrpc.Client client, string method, Variant id, Variant parameters) {
 			info ("Received call %s", method);
-		    switch (method) {
-		        case "initialize":
-		            this.initialize (client, id, parameters);
-		            break;
-		        case "textDocument/documentSymbol":
-		        	this.document_symbol (client, id, parameters);
-		        	break;
-		        case "textDocument/definition":
-		        	this.definition (client, id, parameters);
-		        	break;
+			switch (method) {
+			case "initialize":
+				this.initialize (client, id, parameters);
+				break;
+			case "textDocument/documentSymbol":
+				this.document_symbol (client, id, parameters);
+				break;
+			case "textDocument/definition":
+				this.definition (client, id, parameters);
+				break;
 			}
 			return true;
 		}
@@ -78,13 +78,13 @@ namespace Meson {
 			patches[uri] = ce.text + "\n\n\n";
 			this.load_tree (this.base_uri, patches);
 		}
-		
+
 		void did_save (Variant @params) {
 			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
 			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
 			var patches = new Gee.HashMap<string, string>();
 			patches.set_all (this.tree.patches);
-			patches.unset(uri);
+			patches.unset (uri);
 			this.load_tree (this.base_uri, patches);
 		}
 
@@ -93,24 +93,24 @@ namespace Meson {
 			this.base_uri = Uri.parse (init.rootUri, UriFlags.NONE);
 			this.load_tree (this.base_uri);
 			client.reply (id, build_dict (
-                capabilities: build_dict (
-                	textDocumentSync : new Variant.int32 (1 /* Full*/),
-                    documentSymbolProvider: new Variant.boolean (true),
-                    hoverProvider: new Variant.boolean (true),
-                    documentHighlightProvider : new Variant.boolean (true)
-                ),
-                serverInfo: build_dict (
-                    name: new Variant.string ("Meson Language Server"),
-                    version: new Variant.string ("0.0.1-alpha")
-                )
-            ));
+							  capabilities: build_dict (
+								  textDocumentSync: new Variant.int32 (1 /* Full*/),
+								  documentSymbolProvider: new Variant.boolean (true),
+								  hoverProvider: new Variant.boolean (true),
+								  documentHighlightProvider: new Variant.boolean (true)
+							  ),
+							  serverInfo: build_dict (
+								  name: new Variant.string ("Meson Language Server"),
+								  version: new Variant.string ("0.0.1-alpha")
+							  )
+			));
 		}
 
 		public void definition (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
-			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
+			var p = Util.parse_variant<TextDocumentPositionParams> (@params);
 			var start = GLib.get_real_time () / 1000.0;
 			// First find the identifier to look for
-			var symbol_name = this.ast.find_identifier (p.get_file(), p.position);
+			var symbol_name = this.ast.find_identifier (p.get_file (), p.position);
 			if (symbol_name == null) {
 				client.reply (id, null);
 				return;
@@ -122,8 +122,8 @@ namespace Meson {
 				client.reply (id, null);
 				return;
 			}
-			found.sort ((a,b) => {
-				var pf = p.get_file();
+			found.sort ((a, b) => {
+				var pf = p.get_file ();
 				if (a.sref.file == pf) {
 					if (a.sref.start_line > p.position.line)
 						return 1;
@@ -146,11 +146,11 @@ namespace Meson {
 				return 0;
 			});
 			var end = GLib.get_real_time () / 1000.0;
-			info ("Searched tree for textDocment/definition in %lfms", (end-start));
+			info ("Searched tree for textDocment/definition in %lfms", (end - start));
 			var first_good = found[0];
 			info ("Found good reference: %s (%u %u)", first_good.sref.file, first_good.sref.start_line, first_good.sref.start_column);
 			var location = new Location ();
-			location.uri = File.new_for_path (first_good.sref.file).get_uri();
+			location.uri = File.new_for_path (first_good.sref.file).get_uri ();
 			location.range = new Range () {
 				start = new Position () {
 					line = first_good.sref.start_line,
@@ -163,40 +163,42 @@ namespace Meson {
 			};
 			client.reply (id, Util.object_to_variant (location));
 		}
+
 		public void document_symbol (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
-			var p = Util.parse_variant<TextDocumentPositionParams>(@params);
+			var p = Util.parse_variant<TextDocumentPositionParams> (@params);
 			var syms = new Gee.ArrayList<DocumentSymbol>();
 			var start = GLib.get_real_time () / 1000.0;
 			this.ast.document_symbols (File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path ()).get_path (), syms);
 			var end = GLib.get_real_time () / 1000.0;
-			info ("Searched tree for textDocment/documentSymbol in %lfms", (end-start));
+			info ("Searched tree for textDocment/documentSymbol in %lfms", (end - start));
 			var array = new Json.Array ();
-			array.ref();
+			array.ref ();
 			foreach (var sym in syms)
 				array.add_element (Json.gobject_serialize (sym));
 			var ret = Json.gvariant_deserialize (new Json.Node.alloc ().init_array (array), null);
 			client.reply (id, ret);
 		}
 
-		internal void load_tree (Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>() ) throws GLib.Error {
+		internal void load_tree (Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>()) throws GLib.Error {
 			var start = GLib.get_real_time () / 1000.0;
 			this.tree = SymbolTree.build (dir, patches);
 			this.ast = this.tree.merge ();
 			var end = GLib.get_real_time () / 1000.0;
-			info ("Built tree in %lfms", (end-start));
+			info ("Built tree in %lfms", (end - start));
 		}
+
 		public Variant build_dict (...) {
-		    var builder = new VariantBuilder (new VariantType ("a{sv}"));
-		    var l = va_list ();
-		    while (true) {
-		        string? key = l.arg ();
-		        if (key == null) {
-		            break;
-		        }
-		        Variant val = l.arg ();
-		        builder.add ("{sv}", key, val);
-		    }
-		    return builder.end ();
-    	}
+			var builder = new VariantBuilder (new VariantType ("a{sv}"));
+			var l = va_list ();
+			while (true) {
+				string? key = l.arg ();
+				if (key == null) {
+					break;
+				}
+				Variant val = l.arg ();
+				builder.add ("{sv}", key, val);
+			}
+			return builder.end ();
+		}
 	}
 }

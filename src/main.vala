@@ -18,7 +18,10 @@
 
 int main (string[] args) {
 	if (args.length == 2) {
-		new Meson.TypeRegistry().init();
+		var start = GLib.get_real_time () / 1000.0;
+		new Meson.TypeRegistry ().init ();
+		var end = GLib.get_real_time () / 1000.0;
+		info ("Built type-registry in %lfms", (end - start));
 		var ts = new TreeSitter.TSParser ();
 		var file = args[1];
 		var data = "";
@@ -27,7 +30,7 @@ int main (string[] args) {
 		data += "\n";
 		data_len++;
 		ts.set_language (TreeSitter.tree_sitter_meson ());
-		var root = ts.parse_string (null, data, (uint32)data_len);
+		var root = ts.parse_string (null, data, (uint32) data_len);
 		Meson.SourceFile.build_ast (data, file, root.root_node ());
 		GLib.stdout.printf ("%s\n", root.root_node ().to_string ());
 		return 0;
@@ -37,7 +40,7 @@ int main (string[] args) {
 	var main_loop = new MainLoop ();
 	var s = new Meson.MesonLsp (main_loop);
 	var new_stdout_fd = Posix.dup (Posix.STDOUT_FILENO);
-    Posix.close (Posix.STDOUT_FILENO);
+	Posix.close (Posix.STDOUT_FILENO);
 	Posix.dup2 (Posix.STDERR_FILENO, Posix.STDOUT_FILENO);
 	var input_stream = new UnixInputStream (Posix.STDIN_FILENO, false);
 	var output_stream = new UnixOutputStream (new_stdout_fd, false);

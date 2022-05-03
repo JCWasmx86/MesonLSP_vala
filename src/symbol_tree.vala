@@ -79,7 +79,7 @@ namespace Meson {
 					}
 				}
 			} else if (stmt is SelectionStatement) {
-				var sst = (SelectionStatement)stmt;
+				var sst = (SelectionStatement) stmt;
 				foreach (var block in sst.blocks) {
 					for (var j = 0; j < block.size; j++) {
 						this.analyze_ast_stmt (block, block[j], ref j);
