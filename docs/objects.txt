@@ -1,0 +1,67 @@
+===build_machine===
+Provides information about the build machine - the machine that is doing the actual compilation.
+===host_machine:build_machine===
+Provides information about the host machine -- the machine on which the compiled binary will run. 
+When not cross-compiling, all the methods return the same values as `build_machine` (because the build machine is the host machine)
+Note that while cross-compiling, it simply returns the values defined in the cross-info file.
+===target_machine:build_machine===
+Provides information about the target machine -- the machine on which the compiled binary's output will run. Hence, this object should only be used while cross-compiling a compiler.
+When all compilation is 'native', all the methods return the same values as `build_machine` (because the build machine is the host machine and the target machine).
+Note that while cross-compiling, it simply returns the values defined in the cross-info file. If `target_machine` values are not defined in the cross-info file, `host_machine` values are returned instead.
+===meson===
+The meson object allows you to introspect various properties of the system. This object is always mapped in the meson variable.
+===alias_tgt:tgt===
+Opaque object returned by `alias_target()`.
+===both_libs:lib===
+Container for both a static and shared library.
+===build_tgt:tgt===
+A build target is either an executable, shared library, static library, both shared and static library or shared module.
+===cfg_data===
+This object encapsulates configuration values to be used for generating configuration files. 
+===compiler===
+This object is returned by `meson.get_compiler()`. It represents a compiler for a given language and allows you to query its properties.
+===custom_idx===
+References a specific output file of a `custom_tgt` object.
+===custom_tgt:tgt===
+This object is returned by `custom_target()`
+===dep===
+Abstract representation of a dependency
+===disabler===
+A disabler object is an object that behaves in much the same way as NaN numbers do in floating point math. That is when used in any statement (function call, logical op, etc) they will cause the statement evaluation to immediately short circuit to return a disabler object.
+===env===
+This object is returned by `environment()` and stores detailed information about how environment variables should be set during tests. It should be passed as the env keyword argument to tests and other functions.
+===exe:build_tgt===
+An executable
+===external_program===
+Opaque object representing an external program
+===extracted_obj===
+Opaque object representing extracted object files from build targets
+===feature===
+Meson object representing a feature.
+===file===
+Opaque object that stores the path to an existing file
+===generated_list===
+Opaque object representing the result of a `generator.process()` call.
+===generator===
+This object is returned by `generator()` and contains a generator that is used to transform files from one type to another by an executable (e.g. idl files into source code and headers).
+===inc===
+Opaque wrapper for storing include directories
+===jar:build_tgt===
+A Java JAR build target
+===lib:build_tgt===
+Represents either a shared or static library.
+===module===
+Base type for all modules.
+Modules provide their own specific implementation methods.
+===range===
+Opaque object that can be used in a loop and accessed via `[num]`.
+===run_tgt:tgt===
+Opaque object returned by `run_target()`
+===runresult===
+This object encapsulates the result of trying to compile and run a sample piece of code with `compiler.run()` or `run_command()`.
+===structured_src===
+Opaque object returned by `structured_sources()`.
+===subproject===
+This object is returned by `subproject()` and is an opaque object representing it.
+===tgt===
+Opaque base object for all Meson targets.

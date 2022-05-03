@@ -23,5 +23,5 @@ executable('meson_lsp', mesonlsp_sources,
 	vala_args: '--target-glib=2.58',  dependencies: mesonlsp_deps,
 	install: true,
 	include_directories : incdirs,
-	link_with: ts_lib
+	link_with: [ts_lib, docs_lib]
 )
