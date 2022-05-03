@@ -678,6 +678,7 @@ namespace Meson {
 			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
 			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
 			                       .add_kwarg (ElementaryType.BOOL, "pic")
+			                       .add_kwarg (ElementaryType.BOOL, "pie")
 			                       .add_kwarg (ElementaryType.BOOL, "prelink")
 			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
 			                       .add_kwargv (new MesonType[] {
@@ -701,7 +702,7 @@ namespace Meson {
 			}, "vs_module_defs")
 			                       .add_kwarg (ElementaryType.STR, "win_subsystem")
 			                       .build (), this.find_type ("both_libs"));
-			this.register_method ("build_target", new ParameterListBuilder ()
+			this.register_method ("library", new ParameterListBuilder ()
 			                       .add_param (ElementaryType.STR, "target_name")
 			                       .add_variable_param ("source", new MesonType[] {
 				new Elementary (ElementaryType.STR),
@@ -804,6 +805,7 @@ namespace Meson {
 			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
 			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
 			                       .add_kwarg (ElementaryType.BOOL, "pic")
+			                       .add_kwarg (ElementaryType.BOOL, "pie")
 			                       .add_kwarg (ElementaryType.BOOL, "prelink")
 			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
 			                       .add_kwargv (new MesonType[] {
@@ -1087,6 +1089,7 @@ namespace Meson {
 			                       .add_kwarg (ElementaryType.BOOL, "native")
 			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
 			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
+			                       .add_kwarg (ElementaryType.BOOL, "pie")
 			                       .add_kwarg (ElementaryType.BOOL, "prelink")
 			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
 			                       .add_kwargv (new MesonType[] {
@@ -1154,7 +1157,756 @@ namespace Meson {
 			this.register_method ("include_directories", new ParameterListBuilder ()
 			                       .add_param (ElementaryType.STR, "includes")
 			                       .build (), this.find_type ("inc"));
-			// Continue at https://mesonbuild.com/Reference-manual_functions.html#install_data
+			this.register_method ("install_data", new ParameterListBuilder ()
+			                       .add_variable_param ("file", new MesonType[] {
+				this.find_type ("file"),
+				new Elementary (ElementaryType.STR)
+			})
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "rename")
+			                       .add_kwargv (new MesonType[] {
+				this.list1 (this.find_type ("file")),
+				this.list (ElementaryType.STR)
+			}, "sources")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("install_emptydir", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "dirpath")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("install_headers", new ParameterListBuilder ()
+			                       .add_variable_param ("file", new MesonType[] {
+				this.find_type ("file"),
+				new Elementary (ElementaryType.STR)
+			})
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("install_man", new ParameterListBuilder ()
+			                       .add_variable_param ("file", new MesonType[] {
+				this.find_type ("file"),
+				new Elementary (ElementaryType.STR)
+			})
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("install_subdir", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "subdir_name")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "exclude_directories")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "exclude_files")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg (ElementaryType.BOOL, "strip_directory")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("install_symlink", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "link_name")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg (ElementaryType.STR, "pointing_to")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("is_disabler", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.ANY, "var")
+			                       .build (), new Elementary (ElementaryType.BOOL));
+			this.register_method ("is_variable", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "var")
+			                       .build (), new Elementary (ElementaryType.BOOL));
+			this.register_method ("jar", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "target_name")
+			                       .add_variable_param ("source", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list")
+			})
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "c_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cs_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "fortran_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "java_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objc_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objcpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "rust_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "vala_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cython_args")
+			                       .add_kwarg (ElementaryType.STR, "c_pch")
+			                       .add_kwarg (ElementaryType.STR, "cpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "cs_pch")
+			                       .add_kwarg (ElementaryType.STR, "d_pch")
+			                       .add_kwarg (ElementaryType.STR, "fortran_pch")
+			                       .add_kwarg (ElementaryType.STR, "java_pch")
+			                       .add_kwarg (ElementaryType.STR, "objc_pch")
+			                       .add_kwarg (ElementaryType.STR, "objcpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "rust_pch")
+			                       .add_kwarg (ElementaryType.STR, "vala_pch")
+			                       .add_kwarg (ElementaryType.STR, "cython_pch")
+			                       .add_kwarg (ElementaryType.BOOL, "build_by_default")
+			                       .add_kwarg (ElementaryType.STR, "build_rpath")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_debug")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_import_dirs")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_module_versions")
+			                       .add_kwarg (ElementaryType.BOOL, "d_unittest")
+			                       .add_kwarg1 (this.list1 (this.find_type ("dep")), "dependencies")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "extra_files")
+			                       .add_kwarg (ElementaryType.STR, "gnu_symbol_visibility")
+			                       .add_kwarg (ElementaryType.BOOL, "gui_app")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.BOOL)
+			}, "implib")
+			                       .add_kwarg (ElementaryType.BOOL, "implicit_include_directories")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("inc"))
+			}, "include_directories")
+			                       .add_kwarg (ElementaryType.BOOL, "install")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_rpath")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg1 (this.find_type ("structured_src"), "java_resources")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "link_args")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_depends")
+			                       .add_kwarg (ElementaryType.STR, "link_language")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_whole")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_with")
+			                       .add_kwarg (ElementaryType.STR, "main_class")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_prefix")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_suffix")
+			                       .add_kwarg (ElementaryType.BOOL, "native")
+			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
+			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list"),
+				this.find_type ("structured_src")
+			}, "sources")
+			                       .add_kwarg (ElementaryType.STR, "win_subsystem")
+			                       .build (), this.find_type ("jar"));
+			this.register_method ("join_paths", new ParameterListBuilder ().add_param (ElementaryType.STR, "part").build (), new Elementary (ElementaryType.STR));
+			this.register_method ("library", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "target_name")
+			                       .add_variable_param ("source", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list")
+			})
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "c_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cs_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "fortran_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "java_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objc_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objcpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "rust_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "vala_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cython_args")
+			                       .add_kwarg (ElementaryType.STR, "c_pch")
+			                       .add_kwarg (ElementaryType.STR, "cpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "cs_pch")
+			                       .add_kwarg (ElementaryType.STR, "d_pch")
+			                       .add_kwarg (ElementaryType.STR, "fortran_pch")
+			                       .add_kwarg (ElementaryType.STR, "java_pch")
+			                       .add_kwarg (ElementaryType.STR, "objc_pch")
+			                       .add_kwarg (ElementaryType.STR, "objcpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "rust_pch")
+			                       .add_kwarg (ElementaryType.STR, "vala_pch")
+			                       .add_kwarg (ElementaryType.STR, "cython_pch")
+			                       .add_kwarg (ElementaryType.BOOL, "build_by_default")
+			                       .add_kwarg (ElementaryType.STR, "build_rpath")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_debug")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_import_dirs")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_module_versions")
+			                       .add_kwarg (ElementaryType.BOOL, "d_unittest")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "darwin_versions")
+			                       .add_kwarg1 (this.list1 (this.find_type ("dep")), "dependencies")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "extra_files")
+			                       .add_kwarg (ElementaryType.STR, "gnu_symbol_visibility")
+			                       .add_kwarg (ElementaryType.BOOL, "gui_app")
+			                       .add_kwarg (ElementaryType.BOOL, "implicit_include_directories")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("inc"))
+			}, "include_directories")
+			                       .add_kwarg (ElementaryType.BOOL, "install")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_rpath")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "link_args")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_depends")
+			                       .add_kwarg (ElementaryType.STR, "link_language")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_whole")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_with")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_prefix")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_suffix")
+			                       .add_kwarg (ElementaryType.BOOL, "native")
+			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
+			                       .add_kwarg (ElementaryType.BOOL, "pic")
+			                       .add_kwarg (ElementaryType.BOOL, "prelink")
+			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list"),
+				this.find_type ("structured_src")
+			}, "sources")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.INT),
+			}, "soversion")
+			                       .add_kwarg (ElementaryType.STR, "version")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "vs_module_defs")
+			                       .add_kwarg (ElementaryType.STR, "win_subsystem")
+			                       .build (), this.find_type ("lib"));
+			this.register_method ("message", new ParameterListBuilder ()
+			                       .add_variable_param ("text", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.BOOL),
+				new Elementary (ElementaryType.INT),
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.BOOL),
+				this.dict (ElementaryType.STR),
+				this.dict (ElementaryType.INT),
+				this.dict (ElementaryType.BOOL),
+			})
+			                       .add_variable_param ("more_text", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.BOOL),
+				new Elementary (ElementaryType.INT),
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT),
+				this.list (ElementaryType.BOOL),
+				this.dict (ElementaryType.STR),
+				this.dict (ElementaryType.INT),
+				this.dict (ElementaryType.BOOL),
+			})
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("project", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "project_name")
+			                       .add_param (ElementaryType.STR, "language")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "default_options")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.STR)
+			}, "license")
+			                       .add_kwarg (ElementaryType.STR, "meson_version")
+			                       .add_kwarg (ElementaryType.STR, "subproject_dir")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file")
+			}, "version")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("range", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.INT, "start")
+			                       .add_param (ElementaryType.INT, "stop")
+			                       .add_param (ElementaryType.INT, "step")
+			                       .build (), this.find_type ("range"));
+			this.register_method ("run_command", new ParameterListBuilder ()
+			                       .add_variable_param ("command", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("external_program")
+			})
+			                       .add_kwarg (ElementaryType.BOOL, "capture")
+			                       .add_kwarg (ElementaryType.BOOL, "check")
+			                       .add_kwargv (new MesonType[] {
+				this.find_type ("env"),
+				this.list (ElementaryType.STR),
+				this.dict (ElementaryType.STR)
+			}, "env")
+			                       .build (), this.find_type ("runresult"));
+			this.register_method ("run_target", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "target_name")
+			                       .add_kwargv (new MesonType[] {
+				this.list1 (this.find_type ("exe")),
+				this.list1 (this.find_type ("external_program")),
+				this.list1 (this.find_type ("custom_tgt")),
+				this.list1 (this.find_type ("file")),
+				this.list (ElementaryType.STR)
+			}, "command")
+			                       .add_kwargv (new MesonType[] {
+				this.list1 (this.find_type ("build_tgt")),
+				this.list1 (this.find_type ("custom_tgt")),
+			}, "depends")
+			                       .add_kwargv (new MesonType[] {
+				this.find_type ("env"),
+				this.list (ElementaryType.STR),
+				this.dict (ElementaryType.STR)
+			}, "env")
+			                       .build (), this.find_type ("run_tgt"));
+			this.register_method ("set_variable", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "variable_name")
+			                       .add_param (ElementaryType.ANY, "value")
+			                       .build (), new Elementary (ElementaryType.VOID));
+
+			this.register_method ("shared_library", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "target_name")
+			                       .add_variable_param ("source", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list")
+			})
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "c_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cs_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "fortran_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "java_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objc_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objcpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "rust_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "vala_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cython_args")
+			                       .add_kwarg (ElementaryType.STR, "c_pch")
+			                       .add_kwarg (ElementaryType.STR, "cpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "cs_pch")
+			                       .add_kwarg (ElementaryType.STR, "d_pch")
+			                       .add_kwarg (ElementaryType.STR, "fortran_pch")
+			                       .add_kwarg (ElementaryType.STR, "java_pch")
+			                       .add_kwarg (ElementaryType.STR, "objc_pch")
+			                       .add_kwarg (ElementaryType.STR, "objcpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "rust_pch")
+			                       .add_kwarg (ElementaryType.STR, "vala_pch")
+			                       .add_kwarg (ElementaryType.STR, "cython_pch")
+			                       .add_kwarg (ElementaryType.BOOL, "build_by_default")
+			                       .add_kwarg (ElementaryType.STR, "build_rpath")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_debug")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_import_dirs")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_module_versions")
+			                       .add_kwarg (ElementaryType.BOOL, "d_unittest")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "darwin_versions")
+			                       .add_kwarg1 (this.list1 (this.find_type ("dep")), "dependencies")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "extra_files")
+			                       .add_kwarg (ElementaryType.STR, "gnu_symbol_visibility")
+			                       .add_kwarg (ElementaryType.BOOL, "gui_app")
+			                       .add_kwarg (ElementaryType.BOOL, "implicit_include_directories")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("inc"))
+			}, "include_directories")
+			                       .add_kwarg (ElementaryType.BOOL, "install")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_rpath")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "link_args")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_depends")
+			                       .add_kwarg (ElementaryType.STR, "link_language")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_whole")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_with")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_prefix")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_suffix")
+			                       .add_kwarg (ElementaryType.BOOL, "native")
+			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
+			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list"),
+				this.find_type ("structured_src")
+			}, "sources")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.INT),
+			}, "soversion")
+			                       .add_kwarg (ElementaryType.STR, "version")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "vs_module_defs")
+			                       .add_kwarg (ElementaryType.STR, "win_subsystem")
+			                       .build (), this.find_type ("lib"));
+			this.register_method ("shared_module", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "target_name")
+			                       .add_variable_param ("source", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list")
+			})
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "c_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cs_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "fortran_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "java_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objc_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objcpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "rust_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "vala_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cython_args")
+			                       .add_kwarg (ElementaryType.STR, "c_pch")
+			                       .add_kwarg (ElementaryType.STR, "cpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "cs_pch")
+			                       .add_kwarg (ElementaryType.STR, "d_pch")
+			                       .add_kwarg (ElementaryType.STR, "fortran_pch")
+			                       .add_kwarg (ElementaryType.STR, "java_pch")
+			                       .add_kwarg (ElementaryType.STR, "objc_pch")
+			                       .add_kwarg (ElementaryType.STR, "objcpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "rust_pch")
+			                       .add_kwarg (ElementaryType.STR, "vala_pch")
+			                       .add_kwarg (ElementaryType.STR, "cython_pch")
+			                       .add_kwarg (ElementaryType.BOOL, "build_by_default")
+			                       .add_kwarg (ElementaryType.STR, "build_rpath")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_debug")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_import_dirs")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_module_versions")
+			                       .add_kwarg (ElementaryType.BOOL, "d_unittest")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "darwin_versions")
+			                       .add_kwarg1 (this.list1 (this.find_type ("dep")), "dependencies")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "extra_files")
+			                       .add_kwarg (ElementaryType.STR, "gnu_symbol_visibility")
+			                       .add_kwarg (ElementaryType.BOOL, "gui_app")
+			                       .add_kwarg (ElementaryType.BOOL, "implicit_include_directories")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("inc"))
+			}, "include_directories")
+			                       .add_kwarg (ElementaryType.BOOL, "install")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_rpath")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "link_args")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_depends")
+			                       .add_kwarg (ElementaryType.STR, "link_language")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_whole")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_with")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_prefix")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_suffix")
+			                       .add_kwarg (ElementaryType.BOOL, "native")
+			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
+			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list"),
+				this.find_type ("structured_src")
+			}, "sources")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "vs_module_defs")
+			                       .add_kwarg (ElementaryType.STR, "win_subsystem")
+			                       .build (), this.find_type ("build_tgt"));
+
+			this.register_method ("static_library", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "target_name")
+			                       .add_variable_param ("source", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list")
+			})
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "c_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cs_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "fortran_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "java_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objc_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "objcpp_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "rust_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "vala_args")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "cython_args")
+			                       .add_kwarg (ElementaryType.STR, "c_pch")
+			                       .add_kwarg (ElementaryType.STR, "cpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "cs_pch")
+			                       .add_kwarg (ElementaryType.STR, "d_pch")
+			                       .add_kwarg (ElementaryType.STR, "fortran_pch")
+			                       .add_kwarg (ElementaryType.STR, "java_pch")
+			                       .add_kwarg (ElementaryType.STR, "objc_pch")
+			                       .add_kwarg (ElementaryType.STR, "objcpp_pch")
+			                       .add_kwarg (ElementaryType.STR, "rust_pch")
+			                       .add_kwarg (ElementaryType.STR, "vala_pch")
+			                       .add_kwarg (ElementaryType.STR, "cython_pch")
+			                       .add_kwarg (ElementaryType.BOOL, "build_by_default")
+			                       .add_kwarg (ElementaryType.STR, "build_rpath")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_debug")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_import_dirs")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "d_module_versions")
+			                       .add_kwarg (ElementaryType.BOOL, "d_unittest")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.INT),
+				this.list (ElementaryType.STR)
+			}, "darwin_versions")
+			                       .add_kwarg1 (this.list1 (this.find_type ("dep")), "dependencies")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "extra_files")
+			                       .add_kwarg (ElementaryType.STR, "gnu_symbol_visibility")
+			                       .add_kwarg (ElementaryType.BOOL, "gui_app")
+			                       .add_kwarg (ElementaryType.BOOL, "implicit_include_directories")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("inc"))
+			}, "include_directories")
+			                       .add_kwarg (ElementaryType.BOOL, "install")
+			                       .add_kwarg (ElementaryType.STR, "install_dir")
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.INT)
+			}, "install_mode")
+			                       .add_kwarg (ElementaryType.STR, "install_rpath")
+			                       .add_kwarg (ElementaryType.STR, "install_tag")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "link_args")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_depends")
+			                       .add_kwarg (ElementaryType.STR, "link_language")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_whole")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx")
+			}, "link_with")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_prefix")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.VOID)
+			}, "name_suffix")
+			                       .add_kwarg (ElementaryType.BOOL, "native")
+			                       .add_kwarg1 (this.list1 (this.find_type ("extracted_obj")), "objects")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "override_options")
+			                       .add_kwarg (ElementaryType.BOOL, "pic")
+			                       .add_kwarg (ElementaryType.BOOL, "pie")
+			                       .add_kwarg (ElementaryType.STR, "rust_crate_type")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.find_type ("file"),
+				this.find_type ("custom_tgt"),
+				this.find_type ("custom_idx"),
+				this.find_type ("generated_list"),
+				this.find_type ("structured_src")
+			}, "sources")
+			                       .add_kwarg (ElementaryType.STR, "win_subsystem")
+			                       .build (), this.find_type ("lib"));
+
+			this.register_method ("structured_sources", new ParameterListBuilder ()
+			                       .add_variable_param ("root", new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("file")),
+				this.list1 (this.find_type ("custom_tgt")),
+				this.list1 (this.find_type ("custom_idx")),
+				this.list1 (this.find_type ("generated_list")),
+			})
+			                       .add_variable_param ("additional", new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("file")),
+				this.list1 (this.find_type ("custom_tgt")),
+				this.list1 (this.find_type ("custom_idx")),
+				this.list1 (this.find_type ("generated_list")),
+			})
+			                       .build (), this.find_type ("structured_src"));
+			this.register_method ("subdir", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "dir_name")
+			                       .add_kwarg1 (this.list1 (this.find_type ("dep")), "if_found")
+			                       .build (), new Elementary (ElementaryType.VOID));
+			this.register_method ("subdir_done", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.VOID));
+			this.register_method ("subdir", new ParameterListBuilder ()
+			                       .add_param (ElementaryType.STR, "subprojectname")
+			                       .add_kwarg1 (this.list (ElementaryType.STR), "default_options")
+			                       .add_kwargv (new MesonType[] { new Elementary (ElementaryType.BOOL), this.find_type ("feature") }, "required")
+
+			                       .add_kwarg (ElementaryType.STR, "version")
+			                       .build (), this.find_type ("subproject"));
+			// https://mesonbuild.com/Reference-manual_functions.html#summary
 		}
 
 		void register_method (string name, Gee.List<Parameter> args, MesonType ret) {
