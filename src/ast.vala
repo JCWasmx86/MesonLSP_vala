@@ -19,6 +19,13 @@
  */
 
 namespace Meson {
+	class MesonEnv {
+		Gee.List<VariableJar> stack {get; default = new Gee.ArrayList<VariableJar>(); }
+	}
+	class VariableJar {
+		// <name> <possibleTypes>
+		Gee.Map<string, Gee.List<MesonType>> variables;
+	}
 	class SourceReference {
 		internal uint start_line;
 		internal uint start_column;

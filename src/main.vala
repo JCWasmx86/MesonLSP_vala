@@ -18,6 +18,7 @@
 
 int main (string[] args) {
 	if (args.length == 2) {
+		new Meson.TypeRegistry().init();
 		var ts = new TreeSitter.TSParser ();
 		var file = args[1];
 		var data = "";
