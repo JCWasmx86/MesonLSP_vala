@@ -28,6 +28,7 @@ namespace Meson {
 			this.loop = l;
 			this.tr = new TypeRegistry ();
 			tr.init ();
+			Meson.DocPopulator.populate_docs (tr);
 		}
 
 		protected override void notification (Jsonrpc.Client client, string method, Variant parameters) {
@@ -54,10 +55,27 @@ namespace Meson {
 			case "textDocument/definition":
 				this.definition (client, id, parameters);
 				break;
+			case "textDocument/hover":
+				this.hover (client, id, parameters);
+				break;
 			}
 			return true;
 		}
 
+		void hover (Jsonrpc.Client client, Variant id, Variant params) throws Error {
+			var p = Util.parse_variant<TextDocumentPositionParams> (@params);
+			var start = GLib.get_real_time () / 1000.0;
+			var h = this.ast.hover (this.tr, File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path()).get_path (), p.position);
+			var end = GLib.get_real_time () / 1000.0;
+			info ("Searched tree for textDocment/hover in %lfms", (end - start));
+			if (h == null) {
+				info ("Nothing found for hovering");
+				client.reply (id, null);
+				return;
+			}
+			info ("Found something for hovering");
+			client.reply (id, Util.object_to_variant (h));
+		}
 		void did_change (Variant @params) {
 			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
 			var changes = @params.lookup_value ("contentChanges", VariantType.ARRAY);

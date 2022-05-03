@@ -105,4 +105,14 @@ namespace Meson {
 		public int rangeLength { get; set; }
 		public string text     { get; set; }
 	}
+
+	class MarkupContent : Object {
+		public string kind { get; set; }
+		public string value { get; set; }
+	}
+
+	class Hover : Object {
+		public MarkupContent contents { get; set; }
+		public Range range { get; set; }
+	}
 }

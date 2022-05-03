@@ -32,12 +32,10 @@ int main(string[] argv) {
 			var part = line.replace ("===", "");
 			var parts = part.split(":");
 			tmp.name = parts[0];
-			info ("%s", tmp.name);
 			if (parts.length == 2)
 				tmp.super_class = parts[1];
 			tmp.docs = "";
 		} else {
-			info("==%s", tmp.name);
 			tmp.docs += (line + "\n");
 		}
 	}
@@ -49,15 +47,13 @@ int main(string[] argv) {
 	dos.put_uint16 ((uint16)classes.length);
 	foreach (var c in classes) {
 		if (c.name == null) {
-			info ("???");
 			continue;
 		}
 		assert (c != null);
-		info (">%s", c.name);
 		if (c.super_class == null)
 			dos.put_byte (0x00);
 		else
-			dos.put_byte (0x00);
+			dos.put_byte (0x01);
 		dos.put_uint32 (c.name.length);
 		dos.write (c.name.data);
 		if (c.super_class != null) {

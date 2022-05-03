@@ -2036,13 +2036,22 @@ namespace Meson {
 			return l;
 		}
 
-		ObjectType find_type (string obj_name) {
+		internal ObjectType find_type (string obj_name) {
 			foreach (var t in this.types) {
 				if (t is ObjectType && ((ObjectType) t).name == obj_name) {
 					return (ObjectType) t;
 				}
 			}
 			critical ("Not found: %s", obj_name);
+			assert_not_reached ();
+		}
+
+		internal ObjectType? find_type_safe (string obj_name) {
+			foreach (var t in this.types) {
+				if (t is ObjectType && ((ObjectType) t).name == obj_name) {
+					return (ObjectType) t;
+				}
+			}
 			return null;
 		}
 	}

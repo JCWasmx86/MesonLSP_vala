@@ -15,17 +15,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-[CCode (cname = "meson_lsp_class_docs_data")]
-extern uint8[] meson_lsp_class_docs_data;
-[CCode (cname = "meson_lsp_class_docs_data_len")]
-extern uint32 meson_lsp_class_docs_data_len;
 
 int main (string[] args) {
-	info ("Docs: %u bytes", meson_lsp_class_docs_data_len);
 	if (args.length == 2) {
 		var start = GLib.get_real_time () / 1000.0;
-		new Meson.TypeRegistry ().init ();
+		var tr = new Meson.TypeRegistry ();
+		tr.init ();
 		var end = GLib.get_real_time () / 1000.0;
+		Meson.DocPopulator.populate_docs (tr);
 		info ("Built type-registry in %lfms", (end - start));
 		var ts = new TreeSitter.TSParser ();
 		var file = args[1];
