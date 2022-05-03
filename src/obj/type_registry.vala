@@ -1907,84 +1907,84 @@ namespace Meson {
 			                       .add_kwarg (ElementaryType.STR, "version")
 			                       .build (), this.find_type ("subproject"));
 			this.register_method ("summary", new ParameterListBuilder ()
-				.add_variable_param ("key_or_dict", new MesonType[] {
-					new Elementary (ElementaryType.STR),
-					this.dict (ElementaryType.STR),
-					this.dict (ElementaryType.BOOL),
-					this.dict (ElementaryType.INT),
-					this.dict1 (this.find_type ("dep")),
-					this.dict1 (this.find_type ("external_program")),
-					this.list (ElementaryType.STR),
-					this.list (ElementaryType.BOOL),
-					this.list (ElementaryType.INT),
-					this.list1 (this.find_type ("dep")),
-					this.list1 (this.find_type ("external_program")),
-				})
-				.add_variable_param ("value", new MesonType[] {
-					new Elementary (ElementaryType.STR),
-					new Elementary (ElementaryType.BOOL),
-					new Elementary (ElementaryType.INT),
-					this.find_type ("dep"),
-					this.find_type ("external_program"),
-					this.list (ElementaryType.STR),
-					this.list (ElementaryType.BOOL),
-					this.list (ElementaryType.INT),
-					this.list1 (this.find_type ("dep")),
-					this.list1 (this.find_type ("external_program"))
-				})
-				.add_kwarg (ElementaryType.BOOL, "bool_yn")
-				.add_kwarg (ElementaryType.STR, "list_sep")
-				.add_kwarg (ElementaryType.STR, "section")
-			.build (), new Elementary (ElementaryType.VOID));
+			                       .add_variable_param ("key_or_dict", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.dict (ElementaryType.STR),
+				this.dict (ElementaryType.BOOL),
+				this.dict (ElementaryType.INT),
+				this.dict1 (this.find_type ("dep")),
+				this.dict1 (this.find_type ("external_program")),
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.BOOL),
+				this.list (ElementaryType.INT),
+				this.list1 (this.find_type ("dep")),
+				this.list1 (this.find_type ("external_program")),
+			})
+			                       .add_variable_param ("value", new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				new Elementary (ElementaryType.BOOL),
+				new Elementary (ElementaryType.INT),
+				this.find_type ("dep"),
+				this.find_type ("external_program"),
+				this.list (ElementaryType.STR),
+				this.list (ElementaryType.BOOL),
+				this.list (ElementaryType.INT),
+				this.list1 (this.find_type ("dep")),
+				this.list1 (this.find_type ("external_program"))
+			})
+			                       .add_kwarg (ElementaryType.BOOL, "bool_yn")
+			                       .add_kwarg (ElementaryType.STR, "list_sep")
+			                       .add_kwarg (ElementaryType.STR, "section")
+			                       .build (), new Elementary (ElementaryType.VOID));
 			this.register_method ("test", new ParameterListBuilder ()
-				.add_param (ElementaryType.STR, "name")
-				.add_variable_param ("executable", new MesonType[] {
-					this.find_type ("exe"),
-					this.find_type ("jar"),
-					this.find_type ("external_program"),
-					this.find_type ("file")
-				})
-				.add_kwargv (new MesonType[]{
-					this.list (ElementaryType.STR),
-					this.list1 (this.find_type ("file")),
-					this.list1 (this.find_type ("tgt")),
-				}, "args")
-				.add_kwargv (new MesonType[]{
-					this.list1 (this.find_type ("custom_tgt")),
-					this.list1 (this.find_type ("build_tgt")),
-				}, "depends")
-				.add_kwargv (new MesonType[]{
-					this.find_type ("env"),
-					this.list (ElementaryType.STR),
-					this.dict (ElementaryType.STR),
-				}, "env")
-				.add_kwarg (ElementaryType.BOOL, "is_parallel")
-				.add_kwarg (ElementaryType.INT, "priority")
-				.add_kwarg (ElementaryType.STR, "protocol")
-				.add_kwarg (ElementaryType.BOOL, "should_fail")
-				.add_kwargv (new MesonType[]{
-					new Elementary (ElementaryType.STR),
-					this.list (ElementaryType.STR)
-				}, "suite")
-				.add_kwarg (ElementaryType.INT, "timeout")
-				.add_kwarg (ElementaryType.BOOL, "verbose")
-				.add_kwarg (ElementaryType.STR, "workdir")
-			.build(), new Elementary (ElementaryType.VOID));
+			                       .add_param (ElementaryType.STR, "name")
+			                       .add_variable_param ("executable", new MesonType[] {
+				this.find_type ("exe"),
+				this.find_type ("jar"),
+				this.find_type ("external_program"),
+				this.find_type ("file")
+			})
+			                       .add_kwargv (new MesonType[] {
+				this.list (ElementaryType.STR),
+				this.list1 (this.find_type ("file")),
+				this.list1 (this.find_type ("tgt")),
+			}, "args")
+			                       .add_kwargv (new MesonType[] {
+				this.list1 (this.find_type ("custom_tgt")),
+				this.list1 (this.find_type ("build_tgt")),
+			}, "depends")
+			                       .add_kwargv (new MesonType[] {
+				this.find_type ("env"),
+				this.list (ElementaryType.STR),
+				this.dict (ElementaryType.STR),
+			}, "env")
+			                       .add_kwarg (ElementaryType.BOOL, "is_parallel")
+			                       .add_kwarg (ElementaryType.INT, "priority")
+			                       .add_kwarg (ElementaryType.STR, "protocol")
+			                       .add_kwarg (ElementaryType.BOOL, "should_fail")
+			                       .add_kwargv (new MesonType[] {
+				new Elementary (ElementaryType.STR),
+				this.list (ElementaryType.STR)
+			}, "suite")
+			                       .add_kwarg (ElementaryType.INT, "timeout")
+			                       .add_kwarg (ElementaryType.BOOL, "verbose")
+			                       .add_kwarg (ElementaryType.STR, "workdir")
+			                       .build (), new Elementary (ElementaryType.VOID));
 			this.register_method ("unset_variable",
-				new ParameterListBuilder().add_param (ElementaryType.STR, "varname").build (), new Elementary (ElementaryType.VOID));
+			                      new ParameterListBuilder ().add_param (ElementaryType.STR, "varname").build (), new Elementary (ElementaryType.VOID));
 			this.register_method ("vsc_tag", new ParameterListBuilder ()
-				.add_kwargv (new MesonType[]{
-					this.list1 (this.find_type ("exe")),
-					this.list1 (this.find_type ("external_program")),
-					this.list1 (this.find_type ("custom_tgt")),
-					this.list1 (this.find_type ("file")),
-					this.list (ElementaryType.STR)
-				}, "command")
-				.add_kwarg (ElementaryType.STR, "fallback")
-				.add_kwarg (ElementaryType.STR, "input")
-				.add_kwarg (ElementaryType.STR, "output")
-				.add_kwarg (ElementaryType.STR, "replace_string")
-			.build (), this.find_type ("custom_tgt"));
+			                       .add_kwargv (new MesonType[] {
+				this.list1 (this.find_type ("exe")),
+				this.list1 (this.find_type ("external_program")),
+				this.list1 (this.find_type ("custom_tgt")),
+				this.list1 (this.find_type ("file")),
+				this.list (ElementaryType.STR)
+			}, "command")
+			                       .add_kwarg (ElementaryType.STR, "fallback")
+			                       .add_kwarg (ElementaryType.STR, "input")
+			                       .add_kwarg (ElementaryType.STR, "output")
+			                       .add_kwarg (ElementaryType.STR, "replace_string")
+			                       .build (), this.find_type ("custom_tgt"));
 		}
 
 		void register_method (string name, Gee.List<Parameter> args, MesonType ret) {
