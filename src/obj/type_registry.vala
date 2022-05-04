@@ -143,6 +143,11 @@ namespace Meson {
 			                   new ParameterListBuilder ()
 			                    .add_param (ElementaryType.STR, "variable")
 			                    .add_param (ElementaryType.STR, "Value")
+			                    .add_kwarg (ElementaryType.STR, "separator").build (), new Elementary (ElementaryType.STR))
+			.register_method ("set",
+			                   new ParameterListBuilder ()
+			                    .add_param (ElementaryType.STR, "variable")
+			                    .add_param (ElementaryType.STR, "Value")
 			                    .add_kwarg (ElementaryType.STR, "separator").build (), new Elementary (ElementaryType.STR));
 
 			this.find_type ("external_program")
@@ -234,6 +239,9 @@ namespace Meson {
 			                    .add_kwargv (new MesonType[] { new Elementary (ElementaryType.BOOL), this.find_type ("feature") }, "required")
 			                    .add_kwarg (ElementaryType.BOOL, "static")
 			                    .build (), this.find_type ("dep"))
+			 .register_method ("first_supported_argument", new ParameterListBuilder ()
+			                    .add_param (ElementaryType.STR, "arg")
+			                    .build (), this.list (ElementaryType.STR))
 			 .register_method ("first_supported_link_argument", new ParameterListBuilder ()
 			                    .add_param (ElementaryType.STR, "arg")
 			                    .build (), this.list (ElementaryType.STR))
@@ -349,14 +357,14 @@ namespace Meson {
 			                    .add_kwarg (ElementaryType.STR, "prefix")
 			                    .build (), new Elementary (ElementaryType.INT))
 			 .register_method ("symbols_have_underscore_prefix", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.BOOL))
-			 .register_method ("symbols_have_underscore_prefix", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.STR));
+			 .register_method ("version", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.STR));
 			this.find_type ("custom_idx")
 			 .register_method ("full_path", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.STR));
 			this.find_type ("custom_tgt")
 			 .register_method ("full_path", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.STR))
 			 .register_method ("to_list", new Gee.ArrayList<Parameter>(), this.list1 (this.find_type ("custom_idx")));
 			this.find_type ("dep")
-			 .register_method ("link_as_whole", new Gee.ArrayList<Parameter>(), this.find_type ("dep"))
+			 .register_method ("as_link_whole", new Gee.ArrayList<Parameter>(), this.find_type ("dep"))
 			 .register_method ("as_system", new ParameterListBuilder ()
 			                    .add_param1 (this.list (ElementaryType.STR), "value")
 			                    .build (), this.find_type ("dep"))
@@ -380,7 +388,7 @@ namespace Meson {
 			                    .build (), new Elementary (ElementaryType.STR))
 			 .register_method ("include_type", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.STR))
 			 .register_method ("name", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.STR))
-			 .register_method ("get_pkgconfig_variable", new ParameterListBuilder ()
+			 .register_method ("partial_dependency", new ParameterListBuilder ()
 			                    .add_param (ElementaryType.BOOL, "compile_args")
 			                    .add_param (ElementaryType.BOOL, "includes")
 			                    .add_param (ElementaryType.BOOL, "link_args")
@@ -473,7 +481,8 @@ namespace Meson {
 			                    .add_kwarg (ElementaryType.BOOL, "native")
 			                    .build (), new Elementary (ElementaryType.BOOL))
 			 .register_method ("install_dependency_manifest", new ParameterListBuilder ().add_param (ElementaryType.STR, "output_name").build (), new Elementary (ElementaryType.STR))
-			 .register_method ("is_crossbuild", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.BOOL))
+			 .register_method ("is_cross_build", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.BOOL))
+			 .register_method ("is_subproject", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.BOOL))
 			 .register_method ("is_unity", new Gee.ArrayList<Parameter>(), new Elementary (ElementaryType.BOOL))
 			 .register_method ("override_dependency",
 			                   new ParameterListBuilder ()
@@ -2144,6 +2153,14 @@ namespace Meson {
 			m.return_type.add_all_array (ret);
 			this.methods.add (m);
 			return this;
+		}
+		internal Method find_method (string name) {
+			foreach (var m in this.methods) {
+				if (m.name == name)
+					return m;
+			}
+			critical ("Unknown method in %s: %s", this.name, name);
+			assert_not_reached();
 		}
 	}
 

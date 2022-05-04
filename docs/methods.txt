@@ -1,0 +1,498 @@
+===build_machine::cpu===
+Returns a more specific CPU name, such as `i686`, `amd64`, etc.
+===build_machine::cpu_family===
+Returns the CPU family name.
+===build_machine::endian===
+Returns `'big'` on big-endian systems and `'little'` on little-endian systems.
+===build_machine::system===
+Returns the operating system name.
+===meson::add_devenv===
+Add an `env` object (returned by `environment()`) to the list of environments that will be applied when using meson devenv command line.
+
+- *env*: The `env` object to add. Since 0.62.0 list of strings is allowed in dictionnary values. In that case values are joined using the separator.
+- *method*(**kwarg**): Must be one of 'set', 'prepend', or 'append' (defaults to 'set'). Controls if initial values defined in the first positional argument are prepended, appended or repace the current value of the environment variable.
+- *separator*(**kwarg**): The separator to use for the initial values defined in the first positional argument. If not explicitly specified, the default path separator for the host operating system will be used, i.e. ';' for Windows and ':' for UNIX/POSIX systems.
+===meson::add_dist_script===
+Causes the script given as argument to run during `dist` operation after the distribution source has been generated but before it is archived. Note that this runs the script file that is in the staging directory, not the one in the source directory. If the script file can not be found in the staging directory, it is a hard error. The `MESON_DIST_ROOT` environment variables is set when dist scripts is run.
+
+- *script_name*: The script to execute
+- *arg*(**varargs**): Additional arguments
+===meson::add_install_script===
+Causes the script given as an argument to be run during the install step, this script will have the environment variables `MESON_SOURCE_ROOT`, `MESON_BUILD_ROOT`, `MESON_INSTALL_PREFIX`, `MESON_INSTALL_DESTDIR_PREFIX`, and `MESONINTROSPECT` set. All positional arguments are passed as parameters.
+
+- *script_name*: The script to execute.
+- *arg*(**varargs**): Additional arguments
+- *install_tag*(**kwarg**): A string used by the `meson install --tags` command to install only a subset of the files. By default the script has no install tag which means it is not being run when `meson install --tags` argument is specified.
+- *skip_if_destdir*(**kwarg**): If `true` the script will not be run if `DESTDIR` is set during installation. This is useful in the case the script updates system wide cache that is only needed when copying files into final destination.
+===meson::add_postconf_script===
+Runs the given command after all project files have been generated. This script will have the environment variables `MESON_SOURCE_ROOT` and `MESON_BUILD_ROOT` set.
+
+- *script_name*: The script to execute
+- *arg*(**varargs**): Additional arguments
+===meson::backend===
+Returns a string representing the current backend:
+- `ninja`
+- `vs2010`
+- `vs2012`
+- `vs2013`
+- `vs2015`
+- `vs2017`
+- `vs2019`
+- `vs2022`
+- `xcode`
+===meson::build_root===
+Returns a string with the absolute path to the build root directory. This function will return the build root of the parent project if called from a subproject, which is usually not what you want. Try using `meson.current_build_dir()` or `meson.project_build_root()`. In the rare cases where the root of the main project is needed, use `meson.global_build_root()` that has the same behaviour but with a more explicit name.
+===meson::can_run_host_binaries===
+Returns true if the build machine can run binaries compiled for the host. This returns `true` unless you are cross compiling, need a helper to run host binaries, and don't have one. For example when cross compiling from Linux to Windows, one can use `wine` as the helper.
+===meson::current_build_dir===
+Returns a string with the absolute path to the current build directory.
+===meson::current_source_dir===
+Returns a string to the current source directory.
+===meson::get_compiler===
+Returns a `compiler` object describing a compiler.
+- *language*: The language of the compiler to return.
+- *native*(**kwarg**): When set to `true` Meson returns the compiler for the build machine (the "native" compiler) and when `false` it returns the host compiler (the "cross" compiler). If `native` is omitted, Meson returns the "cross" compiler if we're currently cross-compiling and the "native" compiler if we're not.
+===meson::get_cross_property===
+Returns the given property from a cross file, the optional fallback_value is returned if not cross compiling or the given property is not found.
+
+- *propname*: Name of the property in the cross / native file.
+- *fallback_value*: Value to return if `propname` is not set in the machine file.
+===meson::get_external_property===
+Returns the given property from a native or cross file. The optional `fallback_value` is returned if the given property is not found.
+
+- *propname*: Name of the property in the cross / native file.
+- *fallback_value*: Value to return if `propname` is not set in the machine file.
+- *native*(**kwarg**): Setting `native` to `true` forces retrieving a variable from the native file, even when cross-compiling. If `native: false` or not specified, the variable is retrieved from the cross-file if cross-compiling, and from the native-file when not cross-compiling.
+===meson::global_build_root===
+Returns a string with the absolute path to the build root directory. This function will return the build root of the main project if called from a subproject, which is usually not what you want. It is usually preferable to use `meson.current_build_dir()` or `meson.project_build_root()`.
+===meson::global_source_root===
+Returns a string with the absolute path to the source root directory This function will return the source root of the main project if called from a subproject, which is usually not what you want. It is usually preferable to use `meson.current_source_dir()` or `meson.project_source_root()`.
+===meson::has_exe_wrapper===
+Use `meson.can_run_host_binaries()` instead.
+===meson::has_external_property===
+Checks whether the given property exist in a native or cross file.
+
+- *propname*: Name of the property in the cross / native file.
+- *fallback_value*: Value to return if `propname` is not set in the machine file.
+- *native*(**kwarg**): Setting `native` to `true` forces retrieving a variable from the native file, even when cross-compiling. If `native: false` or not specified, the variable is retrieved from the cross-file if cross-compiling, and from the native-file when not cross-compiling.
+===meson::install_dependency_manifest===
+Installs a manifest file containing a list of all subprojects, their versions and license files to the file name given as the argument.
+
+- *output_name*: Name of the manifest file to install
+===meson::is_cross_build===
+Returns `true` if the current build is a cross build and `false` otherwise.
+===meson::is_subproject===
+Returns `true` if the current project is being built as a subproject of some other project and `false` otherwise.
+===meson::is_unity===
+Returns `true` when doing a unity build (multiple sources are combined before compilation to reduce build time) and `false` otherwise.
+===meson::override_dependency===
+Specifies that whenever `dependency()` with name is used, Meson should not look it up on the system but instead return `dep_object`, which may either be the result of `dependency()` or `declare_dependency()`.
+
+Doing this in a subproject allows the parent project to retrieve the dependency without having to know the dependency variable name: `dependency(name, fallback : subproject_name)`.
+
+- *name*: The name of the dependency to override.
+- *dep_object*: The dependency to set as the override for `name`.
+- *native*(**kwarg**): If set to `true`, the dependency is always overwritten for the build machine. Otherwise, the dependency is overwritten for the host machine, which differs from the build machine when cross-compiling.
+- *static*(**kwarg**): Used to override static and/or shared dependencies separately. If not specified it is assumed `dep_object` follows `default_library` option value.
+===meson::override_find_program===
+specifies that whenever `find_program()` is used to find a program named progname, Meson should not look it up on the system but instead return program, which may either be the result of `find_program()`, `configure_file()` or `executable()`.
+
+- *progname*: The name of the program to override.
+- *program*: The program to set as the override for `progname`.
+===meson::project_build_root===
+Returns a string with the absolute path to the build root directory of the current (sub)project.
+===meson::project_license===
+Returns the array of licenses specified in `project()` function call.
+===meson::project_name===
+Returns the project name specified in the `project()` function call.
+===meson::project_source_root===
+Returns a string with the absolute path to the source root directory of the current (sub)project.
+===meson::project_version===
+Returns the version string specified in `project()` function call.
+===meson::source_root===
+Returns a string with the absolute path to the source root directory.
+
+This function will return the source root of the parent project if called from a subproject, which is usually not what you want. Try using `meson.current_source_dir()` or `meson.project_source_root()`. In the rare cases where the root of the main project is needed, use `meson.global_source_root()` that has the same behaviour but with a more explicit name.
+===meson::version===
+Return a string with the version of Meson.
+===both_libs::get_shared_lib===
+Returns the stored shared library
+===both_libs::get_static_lib===
+Returns the stored static library
+===build_tgt::extract_all_objects===
+Acts the same as `extract_objects`, but returns all object files generated by this target.
+
+By default only objects built for this target are returned to maintain backward compatibility with previous versions. The default value for the `recursive` kwarg will eventually be changed to `true` in a future version.
+
+- *recursive*(**kwarg**): Also return objects passed to the objects argument of this target.
+===build_tgt::extract_objects===
+Returns an opaque value representing the object files generated for those source files. This is typically used to take single object files and link them to unit tests or to compile some source files with custom flags. To use the object file(s) in another build target, use the objects: keyword argument to a `build_target()` or include them in the command line of a `custom_target()`.
+
+- *source*(**vararg**): Source filenames for which the built objects should be extracted
+===build_tgt::found===
+Always returns `true`. This function is meant to make executables objects feature compatible with `external_program` objects. This simplifies use-cases where an executable is used instead of an `external_program`.
+===build_tgt::full_path===
+Returns a full path pointing to the result target file. NOTE: In most cases using the object itself will do the same job as this and will also allow Meson to setup inter-target dependencies correctly. Please file a bug if that doesn't work for you.
+===build_tgt::name===
+Returns the name of the target.
+===build_tgt::path===
+Does the exact same as `build_tgt.full_path()`. NOTE: This function is solely kept for compatibility with `external_program` objects. It will be removed once the, also deprecated, corresponding `path()` function in the `external_program` object is removed.
+===build_tgt::private_dir_include===
+Returns a value that works like `include_directories()`, but points to the private directory of this target. Usually only needed if an another target needs to access some generated internal headers of this target.
+===compiler::alignment===
+Returns the alignment of the specified type.
+
+- *typename*: The name of the type to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared. 
+===compiler::check_header===
+Returns true if the specified header is usable with the specified prefix, dependencies, and arguments.
+
+- *header_name*: The header to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments. 
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+- *required*: If set to true, Meson will halt if the header check fails.
+===compiler::cmd_array===
+Returns an array containing the command(s) for the compiler.
+===compiler::compiles===
+Returns true if the code compiles.
+
+- *code*: The source code to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.	
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *name*(**kwarg**): The name to use for printing a message about the compiler check. If this keyword argument is not passed, no message will be printed about the check.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+===compiler::compute_int===
+Computes the value of the given expression (as an example 1 + 2). When cross compiling this is evaluated with an iterative algorithm, you can specify keyword arguments low (defaults to -1024), high (defaults to 1024) and guess to specify max and min values for the search and the value to try first.
+
+- *expr*: The expression to compute.
+- *args*(**kwarg**): Used to pass a list of compiler arguments. 
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *guess*(**kwarg**): The value to try first.
+- *high*(**kwarg**): The max value.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *low*(**kwarg**): The min value.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+===compiler::find_library===
+Tries to find the library specified in the positional argument.
+
+- *libname*: The library to find.
+- *dirs*(**kwarg**): Additional directories to search in.
+- *disabler*(**kwarg**): If true, this method will return a disabler on a failed check.
+- *has_headers*(**kwarg**): List of headers that must be found as well. This check is equivalent to checking each header with a `compiler.has_header()` call.
+- *header_args*(**kwarg**): When the has_headers kwarg is also used, this argument is passed to `compiler.has_header()` as args.
+- *header_dependencies*(**kwarg**): When the has_headers kwarg is also used, this argument is passed to `compiler.has_header()` as dependencies.
+- *header_include_directories*(**kwarg**): When the has_headers kwarg is also used, this argument is passed to compiler.has_header() as include_directories.
+- *header_no_builtin_args*(**kwarg**): When the has_headers kwarg is also used, this argument is passed to compiler.has_header() as no_builtin_args.
+- *header_prefix*(**kwarg**): When the has_headers kwarg is also used, this argument is passed to compiler.has_header() as prefix.
+- *required*(**kwarg**): If set true, Meson will abort with an error if the library could not be found. Otherwise, Meson will continue and the found method of the returned object will return false.
+- *static*(**kwarg**): If true, the search is limited to static libraries only. Setting this value to false (the default) will search for both shared and static libraries.
+===compiler::first_supported_argument===
+Given a list of strings, returns a single-element list containing the first argument that passes the compiler.has_argument() test or an empty array if none pass.
+
+- *arg*(**vararg**): The arguments to check.
+===compiler::first_supported_link_argument===
+Given a list of strings, returns the first argument that passes the compiler.has_link_argument() test or an empty array if none pass.
+
+- *arg*(**vararg**): The arguments to check.
+===compiler::get_argument_syntax===
+returns a string identifying the type of arguments the compiler takes. Can be one of gcc, msvc, or an undefined string value. This method is useful for identifying compilers that are not gcc or msvc, but use the same argument syntax as one of those two compilers such as clang or icc, especially when they use different syntax on different operating systems.
+===compiler::get_define===
+Returns the given preprocessor symbol's value as a string or empty string if it is not defined.
+
+- *str*: The define to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments. 
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *name*(**kwarg**): The name to use for printing a message about the compiler check. If this keyword argument is not passed, no message will be printed about the check.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+===compiler::get_id===
+Returns a string identifying the compiler. For example, gcc, msvc, and more.
+===compiler::get_linker_id===
+Returns a string identifying the linker. For example, ld.bfd, link, and more.
+===compiler::get_supported_arguments===
+Returns an array containing only the arguments supported by the compiler, as if compiler.has_argument() were called on them individually.
+
+- *arg*(**vararg**): The arguments to check.
+- *checked*(**kwarg**): off, warn, require
+===compiler::get_supported_function_attributes===
+Returns an array containing any names that are supported GCC style attributes. Equivalent to compiler.has_function_attribute() was called on each of them individually.
+===compiler::get_supported_link_arguments===
+Returns an array containing only the arguments supported by the compiler, as if compiler.has_link_argument() were called on them individually.
+===compiler::has_argument===
+Returns true if the compiler accepts the specified command line argument, that is, can compile code without erroring out or printing a warning about an unknown flag.
+
+- *argument*: The argument to check.
+===compiler::has_function===
+Returns true if the given function is provided by the standard library or a library passed in with the args keyword.
+
+- *funcname*: The function to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *name*(**kwarg**): The name to use for printing a message about the compiler check. If this keyword argument is not passed, no message will be printed about the check.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+===compiler::has_function_attribute===
+Returns true if the compiler supports the GNU style (__attribute__(...)) name. This is preferable to manual compile checks as it may be optimized for compilers that do not support such attributes. This table lists all of the supported attributes.
+
+- *name*: The attribute nane to check.
+===compiler::has_header===
+Returns true if the specified header is exists with the specified prefix, dependencies, and arguments.
+
+- *header_name*: The header to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+- *required*: If set to true, Meson will halt if the header check fails.
+===compiler::has_header_symbol===
+Detects whether a particular symbol is declared in the specified header.
+
+- *header_name*: The header to check.
+- *symbol*: The symbol to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+- *required*: If set to true, Meson will halt if the header check fails.
+===compiler::has_link_argument===
+Returns true if the linker accepts the specified command line argument, that is, can compile and link code without erroring out or printing a warning about an unknown flag. Link arguments will be passed to the compiler, so should usually have the -Wl, prefix. On VisualStudio a /link argument will be prepended.
+
+- *argument*: The argument to check.
+===compiler::has_member===
+Returns true if the type has the specified member.
+
+- *type_name*: The type to check.
+- *membername*: The member to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+===compiler::has_members===
+Returns true if the type has all the specified members.
+
+- *type_name*: The type to check.
+- *membername*(**vararg**): The members to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+===compiler::has_multi_arguments===
+The same as compiler.has_argument() but takes multiple arguments and uses them all in a single compiler invocation.
+
+- *arg*(**vararg**): The arguments to check.
+===compiler::has_multi_link_arguments===
+The same as compiler.has_link_argument() but takes multiple arguments and uses them all in a single compiler invocation.
+
+- *arg*(**vararg**): The arguments to check.
+===compiler::has_type===
+Returns true if the specified token is a type.
+
+- *type_name*: The type to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+===compiler::links===
+Returns true if the code compiles and links.
+
+- *code*: The source code to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments. 
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *name*(**kwarg**): The name to use for printing a message about the compiler check. If this keyword argument is not passed, no message will be printed about the check.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+===compiler::run===
+Attempts to compile and execute the given code fragment.
+
+- *code*: The source code to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *name*(**kwarg**): The name to use for printing a message about the compiler check. If this keyword argument is not passed, no message will be printed about the check.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+===compiler::sizeof===
+Returns the size of the given type (e.g. 'int') or -1 if the type is unknown.
+
+- *type_name*: The type to check.
+- *args*(**kwarg**): Used to pass a list of compiler arguments.
+- *dependencies*(**kwarg**): Additionally dependencies required for compiling and / or linking.
+- *include_directories*(**kwarg**): Extra directories for header searches.
+- *no_builtin_args*(**kwarg**): When set to true, the compiler arguments controlled by built-in configuration options are not added.
+- *prefix*(**kwarg**): Used to add `#include`s and other things that are required for the symbol to be declared.
+===compiler::symbols_have_underscore_prefix===
+Returns true if the C symbol mangling is one underscore (_) prefixed to the symbol.
+===compiler::version===
+Returns the compiler's version number as a string.
+===cfg_data::get===
+Returns the value of `varname`, if the value has not been set returns `default_value` if it is defined (since 0.38.0) and errors out if not.
+
+- *varname*: The name of the variable to query
+- *default_value*: The default value to return when `varname` does not exist
+===cfg_data::get_unquoted===
+Returns the value of `varname` but without surrounding double quotes ("). If the value has not been set returns `default_value` if it is defined and errors out if not.
+
+- *varname*: The name of the variable to query
+- *default_value*: The default value to return when `varname` does not exist
+===cfg_data::has===
+Returns `true` if the specified variable is set
+
+- *varname*: The name of the variable to query
+===cfg_data::keys===
+Returns an array of keys of the configuration data object.
+===cfg_data::merge_from===
+Takes as argument a different configuration data object and copies all entries from that object to the current.
+
+- *other*: The other `cfg_data` object to merge into this one.
+===cfg_data::set===
+Sets a variable to a given value.
+
+- *varname*: The name of the variable to set
+- *value*: The value to set
+- *description*(**kwarg**): Message / Comment that will be written in the result file. The replacement assumes a file with C syntax. If your generated file is source code in some other language, you probably don't want to add a description field because it most likely will cause a syntax error.
+===cfg_data::set10===
+Is the same as cfg_data.set() but the value is either `true` or `false` and will be written as `1` or `0`, respectively
+
+- *varname*: The name of the variable to set
+- *value* The value to set as either 1 or 0
+- *description*(**kwarg**): Message / Comment that will be written in the result file. The replacement assumes a file with C syntax. If your generated file is source code in some other language, you probably don't want to add a description field because it most likely will cause a syntax error.
+===cfg_data::set_quoted===
+Is same as `cfg_data.set()` but quotes the value in double quotes (")
+
+- *varname*: The name of the variable to set
+- *value*: The value to set
+- *description*(**kwarg**): Message / Comment that will be written in the result file. The replacement assumes a file with C syntax. If your generated file is source code in some other language, you probably don't want to add a description field because it most likely will cause a syntax error.
+===custom_idx::full_path===
+Returns a full path pointing to the result target file NOTE: In most cases using the object itself will do the same job as this and will also allow Meson to setup inter-target dependencies correctly. Please file a bug if that doesn't work for you.
+===custom_tgt::full_path===
+Returns a full path pointing to the result target file NOTE: In most cases using the object itself will do the same job as this and will also allow Meson to setup inter-target dependencies correctly. Please file a bug if that doesn't work for you. (since 0.54.0) It can be also called on indexes objects: `custom_targets[i].full_path()`.
+===custom_tgt::to_list===
+Returns a list of opaque objects that references this target, and can be used as a source in other targets. This can be used to iterate outputs with `foreach` loop.
+===dep::as_link_whole===
+Only dependencies created with `declare_dependency()`, returns a copy of the dependency object with all `link_with` arguments changed to `link_whole`. This is useful for example for fallback dependency from a subproject built with default_library=static. Note that all link_with objects must be static libraries otherwise an error will be raised when trying to link_whole a shared library.
+===dep::as_system===
+Returns a copy of the dependency object, which has changed the value of include_type to value. The value argument is optional and defaults to 'preserve'.
+
+- *value*: The new value. See dependency() for supported values.
+===dep::found===
+Returns whether the dependency was found.
+===dep::get_configtool_variable===
+Gets the command line argument from the config tool (with -- prepended), or, if invoked on a non config-tool dependency, error out.
+
+- *var_name*: Name of the variable to query
+===dep::get_pkgconfig_variable===
+Gets the pkg-config variable specified, or, if invoked on a non pkg-config dependency, error out.
+
+- *var_name*: Name of the variable to query
+- *default*(**kwarg**): The value to return if the variable was not found. A warning is issued if the variable is not defined and this kwarg is not set.
+- *define_variable*(**kwarg**): You can also redefine a variable by passing a list to this kwarg that can affect the retrieved variable: `['prefix', '/']`.
+===dep::get_variable===
+A generic variable getter method, which replaces the `get_*type*_variable` methods. This allows one to get the variable from a dependency without knowing specifically how that dependency was found. If default_value is set and the value cannot be gotten from the object then default_value is returned, if it is not set then an error is raised.
+
+- *varname*: This argument is used as a default value for cmake, pkgconfig, configtool and internal keyword arguments. It is useful in the common case where pkgconfig and internal use the same variable name.
+- *cmake*(**kwarg**): The CMake variable name
+- *configtool*(**kwarg**): The configtool variable name
+- *default_value*(**kwarg**): The default value to return when the variable does not exist
+- *internal*(**kwarg**): The internal variable name
+- *pkgconfig*(**kwarg**): The pkgconfig variable name
+- *pkgconfig_define*(**kwarg**): See `dep.get_pkgconfig_variable()`
+===dep::include_type===
+Returns the value set by the `include_type` kwarg.
+===dep::name===
+Returns the name of the dependency that was searched. Returns 'internal' for dependencies created with `declare_dependency()`.
+===dep::partial_dependency===
+Returns a new dependency object with the same name, version, found status, type name, and methods as the object that called it. This new object will only inherit other attributes from its parent as controlled by keyword arguments.
+
+- *compile_arg*(**kwarg**): Whether to include compile_args
+- *includes*(**kwarg**): Whether to include includes
+- *link_args*(**kwarg**): Whether to include link_args
+- *links*(**kwarg**): Whether to include links
+- *sources*(**kwarg**): Whether to include sources
+===dep::type_name===
+Returns a string describing the type of the dependency, the most common values are internal for deps created with declare_dependency() and `pkgconfig` for system dependencies obtained with Pkg-config.
+===dep::version===
+The version number as a string, for example 1.2.8.
+`unknown` if the program cannot determine the version via a `--version` argument.
+===disabler::found===
+Always returns `false`
+===env::append===
+Appends the given values to the old value of the environment variable, e.g. `env.append('FOO', 'BAR', 'BAZ', separator : ';')` produces `BOB;BAR;BAZ` if `FOO` had the value `BOB` and plain `BAR;BAZ` if the value was not defined.
+
+- *variable*: The variable to modify
+- *Value*(**vararg**): The values to append
+- *separator(**kwarg**): The separator to use. If not explicitly specified, the default path separator for the host operating system will be used, i.e. ';' for Windows and ':' for UNIX/POSIX systems.
+===env::prepend===
+Same as `append` except that it writes to the beginning of the variable.
+
+- *variable*: The variable to modify
+- *Value*(**vararg**): The values to append
+- *separator(**kwarg**): The separator to use. If not explicitly specified, the default path separator for the host operating system will be used, i.e. ';' for Windows and ':' for UNIX/POSIX systems.
+===env::set===
+Sets the environment variable specified in the first argument to the values in the varargs joined by the separator. For instance, `env.set('FOO', 'BAR')`, sets envvar `FOO` to value `BAR`.
+
+- *variable*: The variable to modify
+- *Value*(**vararg**): The values to append
+- *separator(**kwarg**): The separator to use. If not explicitly specified, the default path separator for the host operating system will be used, i.e. ';' for Windows and ':' for UNIX/POSIX systems.
+===external_program::found===
+Returns whether the executable was found.
+===external_program::full_path===
+Returns a string pointing to the script or executable.
+===external_program::path===
+Deprecated: Use `external_program.full_path()` instead.
+Returns a string pointing to the script or executable.
+===external_program::version===
+The version number as a string, for example 1.2.8.
+`unknown` if the program cannot determine the version via a `--version` argument.
+===feature::allowed===
+Returns whether the feature was set to 'enabled' or 'auto'
+===feature::auto===
+Returns whether the feature was set to 'auto'
+===feature::disable_auto_if===
+Returns the feature, with 'auto' converted to 'disabled' if value is true.
+
+- *value*:
+===feature::disabled===
+Returns whether the feature was set to 'disabled'
+===feature::enabled===
+Returns whether the feature was set to 'enabled'
+===feature::require===
+Returns the object itself if the value is true; an error if the object is 'enabled' and the value is false; a disabled feature if the object is 'auto' or 'disabled' and the value is false.
+
+- *value*: The value to check
+- *error_message*(**kwarg**): The error Message to print if the check fails
+===generator::process===
+Takes a list of files, causes them to be processed and returns an object containing the result which can then, for example, be passed into a build target definition.
+
+- *source*(**vararg**): List of sources to process.
+- *extra_args*(**kwarg**): If present, will be used to replace an entry `@EXTRA_ARGS@` in the argument list.
+- *preserve_path_from*: (**kwarg**): If given, specifies that the output files need to maintain their directory structure
+===module::found===
+Returns true if the module was successfully imported, otherwise false.
+===runresult::compiled===
+If true, the compilation succeeded, if false it did not and the other methods return unspecified data. This is only available for `compiler.run()` results.
+===runresult::returncode===
+The return code of executing the compiled binary
+===runresult::stderr===
+The standard error produced when the command was run.
+===runresult::stdout===
+The standard out produced when the command was run.
+===subproject::found===
+Returns whether the subproject was successfully setup.
+===subproject::get_variable===
+fetches the specified variable from inside the subproject. This is useful to, for instance, get a declare_dependency() from the subproject.
+
+If the variable does not exist, the variable fallback is returned. If a fallback is not specified, then attempting to read a non-existing variable will cause a fatal error.
+
+- *var_name*: The name of the variable to query
+- *fallback*: The fallback value to return if `var_name` does not exist

@@ -57,6 +57,10 @@ namespace Meson {
 			return true;
 		}
 
+		internal string to_string () {
+			return "%s(%u:%u->%u:%u)".printf (this.file, this.start_line, this.start_column, this.end_line, this.end_column);
+		}
+
 		internal Range to_lsp_range () {
 			return new Range () {
 					   start = new Position () {
@@ -686,6 +690,10 @@ namespace Meson {
 				return h;
 			if (list != null && (h = this.list.hover (tr, file, pos)) != null)
 				return h;
+			info ("Searching for %s (%u, %u)", file, pos.line, pos.character);
+			info ("OBJ: %s", this.obj.sref.to_string());
+			info ("THIS: %s", this.sref.to_string());
+			info ("NR: %s", this.name_ref.to_string());
 			if (!this.sref.contains (file, pos))
 				return null;
 			if (obj is Identifier) {
