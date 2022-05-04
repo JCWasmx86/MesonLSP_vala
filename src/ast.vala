@@ -19,6 +19,9 @@
  */
 
 namespace Meson {
+	class HoverContext {
+		internal Gee.Map<string, MesonOption> options;
+	}
 	class MesonEnv {
 		Gee.List<VariableJar> stack { get; default = new Gee.ArrayList<VariableJar>(); }
 	}
@@ -103,9 +106,9 @@ namespace Meson {
 			return ret;
 		}
 
-		internal Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var s in this.statements) {
-				var h = s.hover (tr, file, pos);
+				var h = s.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
@@ -183,7 +186,7 @@ namespace Meson {
 
 		internal virtual void document_symbols (string path, Gee.List<DocumentSymbol> into) {
 		}
-		internal virtual Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal virtual Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			return null;
 		}
 	}
@@ -192,15 +195,15 @@ namespace Meson {
 		Gee.List<Expression> conditions { get; set; default = new Gee.ArrayList<Expression>(); }
 		internal Gee.List<Gee.List<Statement> > blocks { get; set; default = new Gee.ArrayList<Gee.ArrayList<Statement> > (); }
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.conditions) {
-				var h = c.hover (tr, file, pos);
+				var h = c.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
 			foreach (var c in this.blocks) {
 				foreach (var b in c) {
-					var h = b.hover (tr, file, pos);
+					var h = b.hover (tr, file, pos, ctx);
 					if (h != null)
 						return h;
 				}
@@ -285,17 +288,17 @@ namespace Meson {
 		internal Expression id;
 		internal Gee.List<Statement> statements { get; set; default = new Gee.ArrayList<Expression> (); }
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.identifiers) {
-				var h = c.hover (tr, file, pos);
+				var h = c.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
-			var h = this.id.hover (tr, file, pos);
+			var h = this.id.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
 			foreach (var c in this.statements) {
-				h = c.hover (tr, file, pos);
+				h = c.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
@@ -378,11 +381,11 @@ namespace Meson {
 		internal AssignmentOperator op;
 		internal Expression rhs;
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			var h = this.lhs.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			var h = this.lhs.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
-			h = this.rhs.hover (tr, file, pos);
+			h = this.rhs.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
 			return null;
@@ -536,14 +539,14 @@ namespace Meson {
 	}
 
 	class DictionaryLiteral : Expression {
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.keys) {
-				var h = c.hover (tr, file, pos);
+				var h = c.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
 			foreach (var c in this.values) {
-				var h = c.hover (tr, file, pos);
+				var h = c.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
@@ -581,9 +584,9 @@ namespace Meson {
 	}
 
 	class ArrayLiteral : Expression {
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.elements) {
-				var h = c.hover (tr, file, pos);
+				var h = c.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
@@ -684,11 +687,11 @@ namespace Meson {
 	}
 
 	class MethodExpression : Expression {
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			var h = obj.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			var h = obj.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
-			if (list != null && (h = this.list.hover (tr, file, pos)) != null)
+			if (list != null && (h = this.list.hover (tr, file, pos, ctx)) != null)
 				return h;
 			if (!this.sref.contains (file, pos))
 				return null;
@@ -770,14 +773,14 @@ namespace Meson {
 		internal Expression if_true;
 		internal Expression if_false;
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			var h = this.condition.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			var h = this.condition.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
-			h = this.if_true.hover (tr, file, pos);
+			h = this.if_true.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
-			return this.if_false.hover (tr, file, pos);
+			return this.if_false.hover (tr, file, pos, ctx);
 		}
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -813,9 +816,33 @@ namespace Meson {
 		internal ArgumentList? arg_list;
 		internal SourceReference name_ref;
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			if (this.name_ref.contains (file, pos)) {
+				// TODO: Load info from TypeRegistry
+			} else if (this.arg_list != null && this.arg_list.sref.contains (file, pos) && this.name == "get_option") {
+				var args = arg_list.args;
+				if (args.size != 0) {
+					var first_arg = args[0];
+					if (first_arg is StringLiteral) {
+						var option_name = ((StringLiteral)first_arg).val;
+						info ("Found call get_option(%s)", option_name);
+						var hover = new Hover ();
+						var opt = ctx.options[option_name];
+						if (opt != null) {
+							hover.range = this.arg_list.sref.to_lsp_range ();
+							hover.contents = new MarkupContent ();
+							hover.contents.kind = "markdown";
+							hover.contents.value = "Option `%s`\n\nType: %s\n\nDescription: %s\n".printf (option_name, opt.type, opt.description);
+							return hover;
+						} else {
+							info ("Is null????");
+						}
+					}
+				}
+			}
+
 			if (this.arg_list != null)
-				return this.arg_list.hover (tr, file, pos);
+				return this.arg_list.hover (tr, file, pos, ctx);
 			return null;
 		}
 
@@ -849,9 +876,9 @@ namespace Meson {
 		}
 	}
 	class ArgumentList : Expression {
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var e in this.args) {
-				var h = e.hover (tr, file, pos);
+				var h = e.hover (tr, file, pos, ctx);
 				if (h != null)
 					return h;
 			}
@@ -889,8 +916,8 @@ namespace Meson {
 		internal SourceReference key_ref;
 		internal Expression inner;
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			return this.inner.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			return this.inner.hover (tr, file, pos, ctx);
 		}
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -924,11 +951,11 @@ namespace Meson {
 		internal Expression lhs;
 		internal BinaryOperator op;
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			var h = rhs.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			var h = rhs.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
-			return this.lhs.hover (tr, file, pos);
+			return this.lhs.hover (tr, file, pos, ctx);
 		}
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -1006,8 +1033,8 @@ namespace Meson {
 		PLUS, MINUS, STAR, SLASH, MOD, EQ_EQ, N_EQ, GT, LT, GE, LE, IN, NOT_IN, OR, AND
 	}
 	class UnaryExpression : Expression {
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			return this.rhs.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			return this.rhs.hover (tr, file, pos, ctx);
 		}
 		internal Expression rhs;
 		internal UnaryOperator op;
@@ -1051,11 +1078,11 @@ namespace Meson {
 		internal Expression inner;
 		internal Expression outer;
 
-		internal override new Hover? hover (TypeRegistry tr, string file, Position pos) {
-			var h =  this.inner.hover (tr, file, pos);
+		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
+			var h =  this.inner.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
-			return this.outer.hover (tr, file, pos);
+			return this.outer.hover (tr, file, pos, ctx);
 		}
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {

@@ -34,4 +34,8 @@ namespace Meson {
 			return data.substring (node.start_byte (), node.end_byte () - node.start_byte ());
 		}
 	}
+	class MesonOption  {
+		internal string type;
+		internal string description;
+	}
 }

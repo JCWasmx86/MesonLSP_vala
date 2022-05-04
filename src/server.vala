@@ -26,10 +26,6 @@ namespace Meson {
 		SourceFile ast;
 		Gee.HashMap<string, MesonOption> options;
 
-		class MesonOption  {
-			internal string type;
-			internal string description;
-		}
 		internal MesonLsp (MainLoop l) {
 			this.loop = l;
 			this.tr = new TypeRegistry ();
@@ -71,8 +67,10 @@ namespace Meson {
 
 		void hover (Jsonrpc.Client client, Variant id, Variant params) throws Error {
 			var p = Util.parse_variant<TextDocumentPositionParams> (@params);
+			var ctx = new HoverContext ();
+			ctx.options = this.options;
 			var start = GLib.get_real_time () / 1000.0;
-			var h = this.ast.hover (this.tr, File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path()).get_path (), p.position);
+			var h = this.ast.hover (this.tr, File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path()).get_path (), p.position, ctx);
 			var end = GLib.get_real_time () / 1000.0;
 			info ("Searched tree for textDocment/hover in %lfms", (end - start));
 			if (h == null) {
