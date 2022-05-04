@@ -116,14 +116,18 @@ namespace Meson {
 				data_length = data.length;
 			} else
 				FileUtils.get_contents (file.get_path (), out data, out data_length);
-			var root = ps.parse_string (null, data + "\n", (uint32) data_length + 1).root_node ();
+			var tree = ps.parse_string (null, data + "\n", (uint32) data_length + 1);
+			var root = tree.root_node ();
 			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root);
 			assert (ret.file != null);
-			if (root.named_child_count () == 0)
+			if (root.named_child_count () == 0) {
+				tree.free ();
 				return ret;
+			}
 			var build_def = root.named_child (0);
 			if (build_def.type () != "build_definition") {
 				info ("Unexpected type: %s", build_def.type ());
+				tree.free ();
 				return ret;
 			}
 
@@ -133,6 +137,7 @@ namespace Meson {
 					continue;
 				analyze_statement (stmt, ret, uri, file, data, patches);
 			}
+			tree.free ();
 			return ret;
 		}
 

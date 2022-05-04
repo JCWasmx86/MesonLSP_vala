@@ -27,6 +27,9 @@ namespace TreeSitter {
 	public class TSTree {
 		[CCode (cname = "ts_tree_root_node")]
 		public TSNode root_node ();
+
+		[CCode (cname = "ts_tree_delete")]
+		public void free ();
 	}
 
 	[SimpleType]

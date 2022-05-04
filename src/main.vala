@@ -35,6 +35,7 @@ int main (string[] args) {
 		var root = ts.parse_string (null, data, (uint32) data_len);
 		Meson.SourceFile.build_ast (data, file, root.root_node ());
 		GLib.stdout.printf ("%s\n", root.root_node ().to_string ());
+		root.free ();
 		return 0;
 	}
 	GLib.Log.writer_default_set_use_stderr (true);
