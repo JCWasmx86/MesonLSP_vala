@@ -690,10 +690,6 @@ namespace Meson {
 				return h;
 			if (list != null && (h = this.list.hover (tr, file, pos)) != null)
 				return h;
-			info ("Searching for %s (%u, %u)", file, pos.line, pos.character);
-			info ("OBJ: %s", this.obj.sref.to_string());
-			info ("THIS: %s", this.sref.to_string());
-			info ("NR: %s", this.name_ref.to_string());
 			if (!this.sref.contains (file, pos))
 				return null;
 			if (obj is Identifier) {
@@ -704,12 +700,28 @@ namespace Meson {
 					info ("No type called %s found!", name);
 					return null;
 				}
-				var hover = new Hover ();
-				hover.range = this.obj.sref.to_lsp_range ();
-				hover.contents = new MarkupContent ();
-				hover.contents.kind = "markdown";
-				hover.contents.value = type.docs;
-				return hover;
+				if (this.obj.sref.contains (file, pos)) {
+					var hover = new Hover ();
+					hover.range = this.obj.sref.to_lsp_range ();
+					hover.contents = new MarkupContent ();
+					hover.contents.kind = "markdown";
+					hover.contents.value = type.docs;
+					return hover;
+				}
+				if (this.name_ref.contains (file, pos)) {
+					var method = type.find_method_safe (this.name);
+					if (method == null) {
+						info ("Method %s not found", name);
+						return null;
+					}
+					var hover = new Hover ();
+					hover.range = this.name_ref.to_lsp_range ();
+					hover.contents = new MarkupContent ();
+					hover.contents.kind = "markdown";
+					hover.contents.value = method.generate_docs ();
+					return hover;
+				}
+				return null;
 			}
 			return null;
 		}
