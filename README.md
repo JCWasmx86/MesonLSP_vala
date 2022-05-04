@@ -26,8 +26,9 @@ You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin
 
 ## What works?
 - Navigating by clicking on variables
-- (Partially) List symbols in file
-- (Partially) Include subdirectories
+- List symbols in file
+- Include subdirectories
+- Hovering works for the builtin objects
 ## Issues
 - Memory leak(?)
 - Parsing big projects (E.g. mesa) leads to stuttering
