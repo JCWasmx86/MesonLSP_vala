@@ -279,7 +279,81 @@ namespace Meson {
 				option.description = description;
 				this.options.set (option_name, option);
 			}
+			this.register_option ("prefix", "string", "Installation prefix");
+			this.register_option ("bindir", "string", "Executable directory");
+			this.register_option ("datadir", "string", " Data file directory");
+			this.register_option ("includedir", "string", "Header file directory");
+			this.register_option ("infodir", "string", " Info page directory");
+			this.register_option ("libdir", "string", "Library directory");
+			this.register_option ("libexecdir", "string", " Library executable directory");
+			this.register_option ("localedir", "string", "Locale data directory");
+			this.register_option ("localstatedir", "string", " Localstate data directory");
+			this.register_option ("mandir", "string", "Manual page directory");
+			this.register_option ("sbindir", "string", "System executable directory");
+			this.register_option ("sharedstatedir", "string", " Architecture-independent data directory");
+			this.register_option ("sysconfdir", "string", " Sysconf data directory");
+			this.register_option ("auto_features", "combo", " Override value of all 'auto' features");
+			this.register_option ("backend", "combo", "Backend to use");
+			this.register_option ("buildtype", "combo", "Build type to use");
+			this.register_option ("debug", "boolean", " Enable debug symbols and other information");
+			this.register_option ("default_library", "combo", "Default library type");
+			this.register_option ("errorlogs", "boolean", " Whether to print the logs from failing tests.");
+			this.register_option ("install_umask", "integer", " Default umask to apply on permissions of installed files");
+			this.register_option ("layout", "combo", " Build directory layout");
+			this.register_option ("optimization", "combo", " Optimization level");
+			this.register_option ("pkg_config_path", "string", " Additional paths for pkg-config to search before builtin paths");
+			this.register_option ("prefer_static", "boolean", " Whether to try static linking before shared linking");
+			this.register_option ("cmake_prefix_path", "array", " Additional prefixes for cmake to search before builtin paths");
+			this.register_option ("stdsplit", "boolean", " Split stdout and stderr in test logs");
+			this.register_option ("strip", "boolean", " Strip targets on install");
+			this.register_option ("unity", "combo", "Unity build");
+			this.register_option ("unity_size", "integer", "Unity file block size");
+			this.register_option ("warning_level", "combo", " Set the warning level. From 0 = none to 3 = highest");
+			this.register_option ("werror", "boolean", "Treat warnings as errors");
+			this.register_option ("wrap_mode", "combo", " Wrap mode to use");
+			this.register_option ("force_fallback_for", "array", " Force fallback for those dependencies");
+			this.register_option ("b_asneeded", "boolean", " Use -Wl,--as-needed when linking");
+			this.register_option ("b_bitcode", "boolean", "Embed Apple bitcode");
+			this.register_option ("b_colorout", "combo", " Use colored output");
+			this.register_option ("b_coverage", "boolean", "Enable coverage tracking");
+			this.register_option ("b_lundef", "boolean", "Don't allow undefined symbols when linking");
+			this.register_option ("b_lto", "boolean", "Use link time optimization");
+			this.register_option ("b_lto_threads", "integer", "Use multiple threads for lto");
+			this.register_option ("b_lto_mode", "combo", "Select between lto modes, thin and default.");
+			this.register_option ("b_ndebug", "combo", "Disable asserts");
+			this.register_option ("b_pch", "boolean", "Use precompiled headers");
+			this.register_option ("b_pgo", "combo", "Use profile guided optimization");
+			this.register_option ("b_sanitize", "combo", " Code sanitizer to use");
+			this.register_option ("b_staticpic", "boolean", "Build static libraries as position independent");
+			this.register_option ("b_pie", "boolean", "Build position-independent executables");
+			this.register_option ("b_vscrt", "combo", "VS runtime library to use");
+			this.register_option ("c_args", "array", "C compile arguments to use");
+			this.register_option ("c_link_args", "array", "C link arguments to use");
+			this.register_option ("c_std", "combo", "C language standard to use");
+			this.register_option ("c_winlibs", "array", "Standard Windows libs to link against");
+			this.register_option ("c_thread_count", "integer", "Number of threads to use with emcc when using threads");
+			this.register_option ("cpp_args", "array", "C++ compile arguments to use");
+			this.register_option ("cpp_link_args", "array", "C++ link arguments to use");
+			this.register_option ("cpp_std", "combo", "C++ language standard to use");
+			this.register_option ("cpp_debugstl", "boolean", "C++ STL debug mode");
+			this.register_option ("cpp_eh", "combo", "C++ exception handling type");
+			this.register_option ("cpp_rtti", "boolean", "Whether to enable RTTI (runtime type identification)");
+			this.register_option ("cpp_thread_count", "integer", "Number of threads to use with emcc when using threads");
+			this.register_option ("cpp_winlibs", "array", "Standard Windows libs to link against");
+			this.register_option ("fortran_std", "combo", " Fortran language standard to use");
+			this.register_option ("cuda_ccbindir", "string", "CUDA non-default toolchain directory to use (-ccbin)");
+			this.register_option ("pkgconfig.relocatable", "boolean", "Generate the pkgconfig files as relocatable");
+			this.register_option ("python.install_env", "combo", "Which python environment to install to");
+			this.register_option ("python.platlibdir", "string", "Directory for site-specific, platform-specific files");
+			this.register_option ("python.purelibdir", "string", "Directory for site-specific, non-platform-specific files");
 			tree.free ();
+		}
+
+		void register_option (string name, string type, string description) {
+			var o = new MesonOption ();
+			o.type = type;
+			o.description = description;
+			this.options[name] = o;
 		}
 
 		public Variant build_dict (...) {
