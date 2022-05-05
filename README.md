@@ -57,23 +57,20 @@ You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin
 
 ## FAQ
 ### Why Vala?
-I had this requirements for the language server:
+I had these requirements for the language server:
 1. Single small binary (Dynamically linked)
 2. Natively compiled
 3. Fast compile times
 4. Highlevel language
 5. Interop with C
-Some would consider rust a good candidate, but 4. is a deal breaker for me, as fast compile times are needed for my style of development
-and the binaries are really, really big
+Some would consider rust a good candidate, but 4. is a dealbreaker for me,
+as fast compile times are needed for my style of development and the final binaries are massive.
 
 C is maybe a bit too low-level for this task.
 
-Python would have allowed reusing the parser from meson itself, but I don't like to use languages that
-fail at runtime with e.g. a syntax error
+Python would have allowed reusing the parser from meson itself, but I don't like to use languages that fail at runtime with e.g. a syntax error
 
-Using Java + Lsp4j would have been another solution, it would have a dependency on the JVM, thus a high memory usage.
-Using GraalVM to AOT-compile this to a native executable would check all marks except the *small* binary. Furthermore
-I found the documentation of Lsp4j a bit sparse.
+Using Java + Lsp4j would have been another solution, it would have a dependency on the JVM, thus a high memory usage. Using GraalVM to AOT-compile this to a native executable would check all marks except the small binary. Furthermore, I found the documentation of Lsp4j a bit sparse.
 
-So my choice fell onto Vala, it checkes all marks, the dependencies like glib, gobject json-glib are basically
-on every linux desktop.
+So my choice fell onto Vala, it checks all marks, the dependencies like glib, gobject json-glib are basically on every Linux desktop.
+

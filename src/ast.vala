@@ -45,7 +45,6 @@ namespace Meson {
 		}
 
 		internal bool contains (string file, Position pos) {
-			// info ("Is %s(%u:%u) in %s(%u:%u->%u:%u)?", file, pos.line, pos.character, this.file, this.start_line, this.start_column, this.end_line, this.end_column);
 			if (this.file != file)
 				return false;
 			var line_matches = pos.line >= this.start_line && pos.line <= this.end_line;
