@@ -135,13 +135,29 @@ namespace Meson {
 			// First find the identifier to look for
 			var symbol_name = this.ast.find_identifier (p.get_file (), p.position);
 			if (symbol_name == null) {
-				client.reply (id, null);
+				var subdir_location = this.ast.jump_to_subdir (p.get_file (), p.position);
+				if (subdir_location != null) {
+					var location = new Location ();
+					location.uri = File.new_for_path (subdir_location).get_uri ();
+					location.range = new Range () {
+						start = new Position () {
+							line = 0,
+							character = 0
+						},
+						end = new Position () {
+							line = 0,
+							character = 1
+						}
+					};
+					client.reply (id, Util.object_to_variant (location));
+				} else {
+					client.reply (id, null);
+				}
 				return;
 			}
 			info ("Found symbol at location: %s", symbol_name);
 			var found = this.ast.find_symbol (symbol_name);
 			if (found.is_empty) {
-				info ("No matching declarations found :(");
 				client.reply (id, null);
 				return;
 			}

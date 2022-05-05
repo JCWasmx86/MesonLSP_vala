@@ -136,6 +136,15 @@ namespace Meson {
 			}
 			return ret;
 		}
+
+		internal string? jump_to_subdir (string file, Position pos) {
+			foreach (var s in this.statements) {
+				var sd = s.jump_to_subdir (file, pos);
+				if (sd != null)
+					return sd;
+			}
+			return null;
+		}
 	}
 	class SymbolDefinition {
 		internal SourceReference sref;
@@ -188,6 +197,10 @@ namespace Meson {
 		internal virtual Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			return null;
 		}
+
+		internal virtual string? jump_to_subdir (string file, Position pos) {
+			return null;
+		}
 	}
 
 	class SelectionStatement : Statement {
@@ -205,6 +218,22 @@ namespace Meson {
 					var h = b.hover (tr, file, pos, ctx);
 					if (h != null)
 						return h;
+				}
+			}
+			return null;
+		}
+
+		internal override new string? jump_to_subdir (string file, Position pos) {
+			foreach (var expr in this.conditions) {
+				var s = expr.jump_to_subdir (file, pos);
+				if (s != null)
+					return s;
+			}
+			foreach (var b in this.blocks) {
+				foreach (var s in b) {
+					var s1 = s.jump_to_subdir (file, pos);
+					if (s1 != null)
+						return s1;
 				}
 			}
 			return null;
@@ -312,6 +341,20 @@ namespace Meson {
 				e.document_symbols (path, into);
 		}
 
+		internal override new string? jump_to_subdir (string file, Position pos) {
+			foreach (var expr in this.identifiers) {
+				var s = expr.jump_to_subdir (file, pos);
+				if (s != null)
+					return s;
+			}
+			foreach (var expr in this.statements) {
+				var s = expr.jump_to_subdir (file, pos);
+				if (s != null)
+					return s;
+			}
+			return this.id.jump_to_subdir (file, pos);
+		}
+
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
 			var ret = new Gee.ArrayList<SymbolDefinition>();
 			foreach (var s in this.statements) {
@@ -394,6 +437,16 @@ namespace Meson {
 			if (this.op == AssignmentOperator.EQ)
 				this.lhs.document_symbols (path, into);
 			this.rhs.document_symbols (path, into);
+		}
+
+		internal override string? jump_to_subdir (string file, Position pos) {
+			var s = this.lhs.jump_to_subdir (file, pos);
+			if (s != null)
+				return s;
+			s = this.rhs.jump_to_subdir (file, pos);
+			if (s != null)
+				return s;
+			return null;
 		}
 
 		internal override Gee.List<SymbolDefinition> find_symbol (string name) {
@@ -814,6 +867,21 @@ namespace Meson {
 		internal string name;
 		internal ArgumentList? arg_list;
 		internal SourceReference name_ref;
+
+		internal override string? jump_to_subdir (string file, Position pos) {
+			var usable_args = this.arg_list != null && this.arg_list.args.size > 0 && this.arg_list.args[0] is StringLiteral;
+			if (this.sref.contains (file, pos) && this.name == "subdir" && usable_args) {
+				var name = ((StringLiteral)this.arg_list.args[0]).val;
+				info ("Call to subdir %s (From %s)!", name, this.sref.file);
+				var f = File.new_for_path (this.sref.file).get_parent().get_child (name + "/meson.build");
+				if (f.query_exists()) {
+					return f.get_path ();
+				}
+			}
+			if (this.arg_list == null)
+				return null;
+			return this.arg_list.jump_to_subdir (file, pos);
+		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			if (this.name_ref.contains (file, pos)) {

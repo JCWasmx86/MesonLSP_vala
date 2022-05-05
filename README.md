@@ -70,7 +70,8 @@ C is maybe a bit too low-level for this task.
 
 Python would have allowed reusing the parser from meson itself, but I don't like to use languages that fail at runtime with e.g. a syntax error
 
-Using Java + Lsp4j would have been another solution, it would have a dependency on the JVM, thus a high memory usage. Using GraalVM to AOT-compile this to a native executable would check all marks except the small binary. Furthermore, I found the documentation of Lsp4j a bit sparse.
+Using Java + Lsp4j would have been another solution, it would have a dependency on the JVM, thus a high memory usage.
+Using GraalVM to AOT-compile this to a native executable would check all marks except the small binary. Furthermore, I found the documentation of Lsp4j a bit sparse.
 
 So my choice fell onto Vala, it checks all marks, the dependencies like glib, gobject json-glib are basically on every Linux desktop.
 
