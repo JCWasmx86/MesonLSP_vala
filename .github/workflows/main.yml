@@ -15,7 +15,8 @@ jobs:
           sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 7DAAC99C
           sudo add-apt-repository ppa:vala-team
           sudo apt-get update
-          sudo apt install -y libgee-0.8-dev valac* meson libglib2.0-dev libjsonrpc-glib-1.0-dev libjson-glib-dev
+          sudo apt install -y libgee-0.8-dev valac* libglib2.0-dev libjsonrpc-glib-1.0-dev libjson-glib-dev python3-pip ninja-build
+          pip3 install meson
           meson build
           cd build
           ninja install
