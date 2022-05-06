@@ -24,6 +24,13 @@ namespace Meson {
 	}
 	class MesonEnv {
 		Gee.List<VariableJar> stack { get; default = new Gee.ArrayList<VariableJar>(); }
+		Gee.List<VariablePos> positions { get; default = new Gee.ArrayList<VariablePos> (); }
+		internal TypeRegistry registry;
+	}
+	class VariablePos {
+		internal string name;
+		internal SourceReference sref;
+		internal Gee.List<MesonType> deduced_types { get; default = new Gee.ArrayList<MesonType>(); }
 	}
 	class VariableJar {
 		// <name> <possibleTypes>
@@ -145,6 +152,26 @@ namespace Meson {
 			}
 			return null;
 		}
+
+		internal void fill_env (MesonEnv env) {
+			foreach (var s in this.statements) {
+				s.fill_env (env);
+			}
+		}
+
+		internal void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			foreach (var s in this.statements) {
+				s.fill_diagnostics (env, diagnostics);
+				if (s is JumpStatement) {
+					diagnostics.add (
+						new Diagnostic.error (
+							s.sref,
+							"%s outside of loop".printf (((JumpStatement) s).is_break ? "break" : "continue")
+						)
+					);
+				}
+			}
+		}
 	}
 	class SymbolDefinition {
 		internal SourceReference sref;
@@ -194,6 +221,7 @@ namespace Meson {
 
 		internal virtual void document_symbols (string path, Gee.List<DocumentSymbol> into) {
 		}
+
 		internal virtual Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			return null;
 		}
@@ -201,10 +229,55 @@ namespace Meson {
 		internal virtual string? jump_to_subdir (string file, Position pos) {
 			return null;
 		}
+
+		internal virtual void fill_env (MesonEnv env) {
+		}
+
+		internal virtual void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+		}
 	}
 
 	class SelectionStatement : Statement {
 		Gee.List<Expression> conditions { get; set; default = new Gee.ArrayList<Expression>(); }
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			foreach (var expr in this.conditions) {
+				expr.fill_diagnostics (env, diagnostics);
+				var type = expr.deduce_type (env);
+				if (!(type is ElementaryType)) {
+					var t = ((Elementary) type).type;
+					if (t != ElementaryType.BOOL && t != ElementaryType.NOT_DEDUCEABLE) {
+						diagnostics.add (
+							new Diagnostic.error (
+								expr.sref,
+								"Condition is not boolean"
+							)
+						);
+					}
+				} else {
+					diagnostics.add (
+						new Diagnostic.error (
+							expr.sref,
+							"Condition is not boolean"
+						)
+					);
+				}
+			}
+			foreach (var block in this.blocks) {
+				foreach (var stmt in block) {
+					stmt.fill_diagnostics (env, diagnostics);
+					if (stmt is JumpStatement) {
+						diagnostics.add (
+							new Diagnostic.error (
+								stmt.sref,
+								"%s outside of loop".printf (((JumpStatement) stmt).is_break ? "break" : "continue")
+							)
+						);
+					}
+				}
+			}
+		}
+
 		internal Gee.List<Gee.List<Statement> > blocks { get; set; default = new Gee.ArrayList<Gee.ArrayList<Statement> > (); }
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
@@ -316,6 +389,30 @@ namespace Meson {
 		internal Expression id;
 		internal Gee.List<Statement> statements { get; set; default = new Gee.ArrayList<Expression> (); }
 
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			this.id.fill_diagnostics (env, diagnostics);
+			var type = this.id.deduce_type (env);
+			if (!(type is MList || type is Dictionary)) {
+				diagnostics.add (
+					new Diagnostic.error (
+						id.sref,
+						"%s is not iterateable".printf (type.to_string ())
+					)
+				);
+			}
+			foreach (var id in this.identifiers) {
+				if (!(id is Identifier)) {
+					diagnostics.add (
+						new Diagnostic.error (
+							id.sref,
+							"Expected identifier"
+						)
+					);
+				}
+				id.fill_diagnostics (env, diagnostics);
+			}
+		}
+
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.identifiers) {
 				var h = c.hover (tr, file, pos, ctx);
@@ -422,6 +519,15 @@ namespace Meson {
 		internal Expression lhs;
 		internal AssignmentOperator op;
 		internal Expression rhs;
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			lhs.fill_diagnostics (env, diagnostics);
+			rhs.fill_diagnostics (env, diagnostics);
+			// list: =,+= is allowed
+			// dict: =,+= is allowed
+			// str: =
+			// int: all
+		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			var h = this.lhs.hover (tr, file, pos, ctx);
@@ -566,6 +672,10 @@ namespace Meson {
 				assert_not_reached ();
 			}
 		}
+
+		internal virtual MesonType deduce_type (MesonEnv env) {
+			return new Elementary (ElementaryType.NOT_DEDUCEABLE);
+		}
 	}
 
 	class Identifier : Expression {
@@ -591,6 +701,15 @@ namespace Meson {
 	}
 
 	class DictionaryLiteral : Expression {
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			foreach (var k in this.keys) {
+				k.fill_diagnostics (env, diagnostics);
+			}
+			foreach (var v in this.values) {
+				v.fill_diagnostics (env, diagnostics);
+			}
+		}
+
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.keys) {
 				var h = c.hover (tr, file, pos, ctx);
@@ -636,6 +755,12 @@ namespace Meson {
 	}
 
 	class ArrayLiteral : Expression {
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			foreach (var e in this.elements) {
+				e.fill_diagnostics (env, diagnostics);
+			}
+		}
+
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			foreach (var c in this.elements) {
 				var h = c.hover (tr, file, pos, ctx);
@@ -748,7 +873,7 @@ namespace Meson {
 			if (!this.sref.contains (file, pos))
 				return null;
 			if (obj is Identifier) {
-				var name = ((Identifier)obj).name;
+				var name = ((Identifier) obj).name;
 				var type = tr.find_type_safe (name);
 				// It is not an static object reference, but a variable reference
 				if (type == null) {
@@ -871,10 +996,10 @@ namespace Meson {
 		internal override string? jump_to_subdir (string file, Position pos) {
 			var usable_args = this.arg_list != null && this.arg_list.args.size > 0 && this.arg_list.args[0] is StringLiteral;
 			if (this.sref.contains (file, pos) && this.name == "subdir" && usable_args) {
-				var name = ((StringLiteral)this.arg_list.args[0]).val;
+				var name = ((StringLiteral) this.arg_list.args[0]).val;
 				info ("Call to subdir %s (From %s)!", name, this.sref.file);
-				var f = File.new_for_path (this.sref.file).get_parent().get_child (name + "/meson.build");
-				if (f.query_exists()) {
+				var f = File.new_for_path (this.sref.file).get_parent ().get_child (name + "/meson.build");
+				if (f.query_exists ()) {
 					return f.get_path ();
 				}
 			}
@@ -891,7 +1016,7 @@ namespace Meson {
 				if (args.size != 0) {
 					var first_arg = args[0];
 					if (first_arg is StringLiteral) {
-						var option_name = ((StringLiteral)first_arg).val;
+						var option_name = ((StringLiteral) first_arg).val;
 						info ("Found call get_option(%s)", option_name);
 						var hover = new Hover ();
 						var opt = ctx.options[option_name];
@@ -1146,7 +1271,7 @@ namespace Meson {
 		internal Expression outer;
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
-			var h =  this.inner.hover (tr, file, pos, ctx);
+			var h = this.inner.hover (tr, file, pos, ctx);
 			if (h != null)
 				return h;
 			return this.outer.hover (tr, file, pos, ctx);

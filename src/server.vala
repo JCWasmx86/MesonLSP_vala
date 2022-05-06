@@ -20,10 +20,10 @@
 namespace Meson {
 	public class MesonLsp : Jsonrpc.Server {
 		Uri base_uri;
-		SymbolTree tree;
+		SymbolTree? tree;
 		TypeRegistry tr;
 		MainLoop loop;
-		SourceFile ast;
+		SourceFile? ast;
 		Gee.HashMap<string, MesonOption> options;
 
 		internal MesonLsp (MainLoop l) {
@@ -38,10 +38,10 @@ namespace Meson {
 			info ("Received notification %s", method);
 			switch (method) {
 			case "textDocument/didChange":
-				this.did_change (parameters);
+				this.did_change (client, parameters);
 				break;
 			case "textDocument/didSave":
-				this.did_save (parameters);
+				this.did_save (client, parameters);
 				break;
 			}
 		}
@@ -70,7 +70,7 @@ namespace Meson {
 			var ctx = new HoverContext ();
 			ctx.options = this.options;
 			var start = GLib.get_real_time () / 1000.0;
-			var h = this.ast.hover (this.tr, File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path()).get_path (), p.position, ctx);
+			var h = this.ast.hover (this.tr, File.new_for_path (Uri.parse (p.textDocument.uri, UriFlags.NONE).get_path ()).get_path (), p.position, ctx);
 			var end = GLib.get_real_time () / 1000.0;
 			info ("Searched tree for textDocment/hover in %lfms", (end - start));
 			if (h == null) {
@@ -81,7 +81,8 @@ namespace Meson {
 			info ("Found something for hovering");
 			client.reply (id, Util.object_to_variant (h));
 		}
-		void did_change (Variant @params) {
+
+		void did_change (Jsonrpc.Client client, Variant @params) {
 			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
 			var changes = @params.lookup_value ("contentChanges", VariantType.ARRAY);
 			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
@@ -99,22 +100,22 @@ namespace Meson {
 			patches.set_all (this.tree.patches);
 			// Override other changes
 			patches[uri] = ce.text + "\n\n\n";
-			this.load_tree (this.base_uri, patches);
+			this.load_tree (client, this.base_uri, patches);
 		}
 
-		void did_save (Variant @params) {
+		void did_save (Jsonrpc.Client client, Variant @params) {
 			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
 			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
 			var patches = new Gee.HashMap<string, string>();
 			patches.set_all (this.tree.patches);
 			patches.unset (uri);
-			this.load_tree (this.base_uri, patches);
+			this.load_tree (client, this.base_uri, patches);
 		}
 
 		void initialize (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var init = Util.parse_variant<InitializeParams> (@params);
 			this.base_uri = Uri.parse (init.rootUri, UriFlags.NONE);
-			this.load_tree (this.base_uri);
+			this.load_tree (client, this.base_uri);
 			client.reply (id, build_dict (
 							  capabilities: build_dict (
 								  textDocumentSync: new Variant.int32 (1 /* Full*/),
@@ -218,13 +219,53 @@ namespace Meson {
 			client.reply (id, ret);
 		}
 
-		internal void load_tree (Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>()) throws GLib.Error {
+		internal void load_tree (Jsonrpc.Client client, Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>()) throws GLib.Error {
+			if (this.tree != null && this.tree.child_files != null) {
+				foreach (var file in this.tree.child_files) {
+					var uri = Uri.parse (file, UriFlags.NONE);
+					var diags = new Variant.array (VariantType.VARIANT, new Variant[] {});
+					client.send_notification ("textDocument/publishDiagnostics",
+					                          build_dict (
+												  uri: new Variant.string (uri.to_string ()),
+												  diagnostics: diags
+					));
+				}
+			}
 			this.options.clear ();
 			var start = GLib.get_real_time () / 1000.0;
 			this.tree = SymbolTree.build (dir, patches);
 			this.ast = this.tree.merge ();
 			var end = GLib.get_real_time () / 1000.0;
 			info ("Built tree in %lfms", (end - start));
+			var diagnostics = new Gee.ArrayList<Diagnostic>();
+			var env = new MesonEnv ();
+			var hash_map = new Gee.HashMap<string, Gee.List<Diagnostic> >();
+			foreach (var diagnostic in diagnostics) {
+				var file = diagnostic.file;
+				if (hash_map.has_key (file)) {
+					hash_map[file].add (diagnostic);
+				} else {
+					hash_map.set (file, new Gee.ArrayList<Diagnostic>());
+					hash_map[file].add (diagnostic);
+				}
+			}
+			foreach (var entry in hash_map) {
+				var key = entry.key;
+				var v = entry.value;
+				var uri = Uri.parse (key, UriFlags.NONE).to_string ();
+				info ("Publishing %u diagnostics for %s", v.size, uri);
+				var arr = new Json.Array ();
+				foreach (var d in v) {
+					arr.add_element (Json.gobject_serialize (d));
+				}
+				client.send_notification (
+					"textDocument/publishDiagnostics",
+					build_dict (
+						uri: new Variant.string (uri),
+						diagnostics: Json.gvariant_deserialize (new Json.Node.alloc ().init_array (arr), null)
+				));
+			}
+			this.ast.fill_diagnostics (env, diagnostics);
 			var file = this.base_uri.get_path () + "/meson_options.txt";
 			var f = File.new_for_path (file);
 			if (!f.query_exists ())

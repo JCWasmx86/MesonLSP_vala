@@ -144,7 +144,7 @@ namespace Meson {
 			                    .add_param (ElementaryType.STR, "variable")
 			                    .add_param (ElementaryType.STR, "Value")
 			                    .add_kwarg (ElementaryType.STR, "separator").build (), new Elementary (ElementaryType.STR))
-			.register_method ("set",
+			 .register_method ("set",
 			                   new ParameterListBuilder ()
 			                    .add_param (ElementaryType.STR, "variable")
 			                    .add_param (ElementaryType.STR, "Value")
@@ -2157,14 +2157,16 @@ namespace Meson {
 			this.methods.add (m);
 			return this;
 		}
+
 		internal Method find_method (string name) {
 			foreach (var m in this.methods) {
 				if (m.name == name)
 					return m;
 			}
 			critical ("Unknown method in %s: %s", this.name, name);
-			assert_not_reached();
+			assert_not_reached ();
 		}
+
 		internal Method? find_method_safe (string name) {
 			foreach (var m in this.methods) {
 				if (m.name == name)
@@ -2186,41 +2188,42 @@ namespace Meson {
 		internal Gee.List<MesonType> return_type;
 
 		internal string generate_docs () {
-			var sb = new StringBuilder();
+			var sb = new StringBuilder ();
 			sb.append ("`").append (this.name).append ("`\n\n").append (this.doc);
 			sb.append ("\n```\n");
-			sb.append(this.return_type_doc()).append (" ").append (this.name);
+			sb.append (this.return_type_doc ()).append (" ").append (this.name);
 			if (this.parameters.size == 0)
 				sb.append (" ();");
 			else {
 				sb.append (" (\n");
-				var kw = new StringBuilder();
+				var kw = new StringBuilder ();
 				var p = new StringBuilder ();
 				foreach (var param in this.parameters) {
 					if (param.is_keyword) {
 						kw.append ("    ").append (param.name)
-							.append (": ").append(param.type_string())
-							.append (param.required ? "(optional),\n" : ",\n");
+						 .append (": ").append (param.type_string ())
+						 .append (param.required ? "(optional),\n" : ",\n");
 					} else {
-						p.append ("    ").append (param.type_string())
-							.append (" ").append (param.name).append (",\n");
+						p.append ("    ").append (param.type_string ())
+						 .append (" ").append (param.name).append (",\n");
 					}
 				}
 				sb.append (p.str).append (kw.str);
 				sb.append (");");
 			}
-			sb.append("\n```");
+			sb.append ("\n```");
 			return sb.str;
 		}
+
 		string return_type_doc () {
 			var types = new string[0];
 			foreach (var t in this.return_type)
 				types += t.to_string ();
 			var sb = new StringBuilder ();
 			for (var i = 0; i < types.length; i++) {
-				sb.append(types[i]);
+				sb.append (types[i]);
 				if (i != types.length - 1)
-					sb.append("|");
+					sb.append ("|");
 			}
 			return sb.str;
 		}
@@ -2238,32 +2241,35 @@ namespace Meson {
 				types += t.to_string ();
 			var sb = new StringBuilder ();
 			for (var i = 0; i < types.length; i++) {
-				sb.append(types[i]);
+				sb.append (types[i]);
 				if (i != types.length - 1)
-					sb.append("|");
+					sb.append ("|");
 			}
 			return sb.str;
 		}
 	}
 
 	internal class Elementary : MesonType {
-		ElementaryType type;
+		internal ElementaryType type;
 
 		internal Elementary (ElementaryType t) {
 			this.type = t;
 		}
+
 		internal override string to_string () {
 			switch (this.type) {
-				case ElementaryType.ANY:
-					return "any";
-				case ElementaryType.BOOL:
-					return "bool";
-				case ElementaryType.INT:
-					return "int";
-				case ElementaryType.STR:
-					return "str";
-				case ElementaryType.VOID:
-					return "void";
+			case ElementaryType.ANY:
+				return "any";
+			case ElementaryType.BOOL:
+				return "bool";
+			case ElementaryType.INT:
+				return "int";
+			case ElementaryType.STR:
+				return "str";
+			case ElementaryType.VOID:
+				return "void";
+			case ElementaryType.NOT_DEDUCEABLE:
+				return "<not_deduceable>";
 			}
 			assert_not_reached ();
 		}
@@ -2273,14 +2279,14 @@ namespace Meson {
 		internal Gee.List<MesonType> values { get; set; default = new Gee.ArrayList<MesonType>(); }
 
 		internal override string to_string () {
-			return "dict[%s]".printf (this.values[0].to_string());
+			return "dict[%s]".printf (this.values[0].to_string ());
 		}
 	}
 
 	internal class MList : MesonType {
 		internal Gee.List<MesonType> values { get; set; default = new Gee.ArrayList<MesonType>(); }
 		internal override string to_string () {
-			return "list[%s]".printf (this.values[0].to_string());
+			return "list[%s]".printf (this.values[0].to_string ());
 		}
 	}
 
@@ -2289,6 +2295,7 @@ namespace Meson {
 		BOOL,
 		INT,
 		STR,
-		VOID
+		VOID,
+		NOT_DEDUCEABLE
 	}
 }

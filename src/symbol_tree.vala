@@ -22,6 +22,7 @@ namespace Meson {
 	class SymbolTree : Data {
 		internal Gee.List<Data> datas { get; set; default = new Gee.ArrayList<Data>(); }
 		internal Gee.Map<string, string> patches { get; set; default = new Gee.HashMap<string, string>(); }
+		internal Gee.List<string> child_files { get; set; default = new Gee.ArrayList<string>(); }
 		internal string filename;
 		internal SourceFile? file;
 		internal Gee.List<Symbol> flatten () {
@@ -105,6 +106,7 @@ namespace Meson {
 			if (!file.query_exists ())
 				return ret;
 			ret.filename = file.get_path ();
+			ret.child_files.add (ret.filename);
 			info ("Found meson.build: %s", file.get_path ());
 			var ps = new TreeSitter.TSParser ();
 			var lang = TreeSitter.tree_sitter_meson ();
@@ -161,6 +163,7 @@ namespace Meson {
 							var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches);
 							assert (st.file != null);
 							ret.datas.add (st);
+							ret.child_files.add (File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str + "/meson.build").get_path ());
 						}
 					}
 				} else if (s.type () == "assignment_statement") {

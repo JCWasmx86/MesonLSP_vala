@@ -27,64 +27,64 @@ extern uint8 meson_lsp_method_docs_data;
 extern uint32 meson_lsp_method_docs_data_len;
 namespace Meson {
 	class DocPopulator {
-		public static void populate_docs (TypeRegistry tr) {
+		public static void populate_docs (TypeRegistry tr) throws IOError {
 			var doc_classes = new Gee.ArrayList<DocClass> ();
 			var data_copy = new uint8[meson_lsp_class_docs_data_len];
 			Posix.memcpy (data_copy, &meson_lsp_class_docs_data, meson_lsp_class_docs_data_len);
 			var mis = new MemoryInputStream.from_data (data_copy);
-			var dis = new DataInputStream(mis);
+			var dis = new DataInputStream (mis);
 			var byte = dis.read_byte ();
 			assert (byte == 0x55 && "Does not match 0x55" != null);
 			byte = dis.read_byte ();
 			assert (byte == 0xaa && "Does not match 0xaa" != null);
 			var bytes_read = 2u;
 			var bytes_left = meson_lsp_class_docs_data_len - 2;
-			var n_classes = dis.read_uint16();
+			dis.read_uint16 ();
 			bytes_read += 2;
 			bytes_left -= 2;
 			var hierarchy = new Gee.HashMap<string, string>();
 			while (bytes_left != 0) {
-				var has_super_class = dis.read_byte() == 0x1;
+				var has_super_class = dis.read_byte () == 0x1;
 				bytes_read++;
 				bytes_left--;
-				var c = new DocClass();
-				var len = dis.read_uint32();
+				var c = new DocClass ();
+				var len = dis.read_uint32 ();
 				bytes_read += 4;
 				bytes_left -= 4;
 				assert (len < bytes_left);
 				var bytes = new uint8[len];
-				Posix.memset(bytes, 0, len);
-				dis.read(bytes);
+				Posix.memset (bytes, 0, len);
+				dis.read (bytes);
 				bytes_read += len;
 				bytes_left -= len;
 				bytes += 0;
-				var class_name = ((string)bytes).dup();
+				var class_name = ((string) bytes).dup ();
 				c.name = class_name;
 				if (has_super_class) {
-					len = dis.read_uint32();
+					len = dis.read_uint32 ();
 					bytes_read += 4;
 					bytes_left -= 4;
 					assert (len < bytes_left);
 					bytes = new uint8[len];
-					Posix.memset(bytes, 0, len);
-					dis.read(bytes);
+					Posix.memset (bytes, 0, len);
+					dis.read (bytes);
 					bytes_read += len;
 					bytes_left -= len;
 					bytes += 0;
-					var sclass_name = ((string)bytes).dup();
+					var sclass_name = ((string) bytes).dup ();
 					c.super_class = sclass_name;
 				}
-				len = dis.read_uint32();
+				len = dis.read_uint32 ();
 				bytes_read += 4;
 				bytes_left -= 4;
 				bytes = new uint8[len];
-				Posix.memset(bytes, 0, len);
-				dis.read(bytes);
+				Posix.memset (bytes, 0, len);
+				dis.read (bytes);
 				assert (len <= bytes_left);
 				bytes_read += len;
 				bytes_left -= len;
 				bytes += 0;
-				var docs = (string)bytes;
+				var docs = (string) bytes;
 				c.docs = docs;
 				doc_classes.add (c);
 				info ("Extracted class %s (extends %s)", c.name, c.super_class);
@@ -93,7 +93,7 @@ namespace Meson {
 			}
 			foreach (var c in doc_classes) {
 				var h = new string[0];
-				var sb = new StringBuilder();
+				var sb = new StringBuilder ();
 				var parent = c.super_class;
 				while (true) {
 					if (parent == null || !hierarchy.has_key (parent))
@@ -101,7 +101,7 @@ namespace Meson {
 					h += parent;
 					parent = hierarchy[parent];
 				}
-				sb.append("```\n");
+				sb.append ("```\n");
 				sb.append (c.name);
 				if (h.length != 0)
 					sb.append (" extends ");
@@ -110,69 +110,70 @@ namespace Meson {
 					if (i != h.length - 1)
 						sb.append (" extends ");
 				}
-				sb.append("\n```\n");
+				sb.append ("\n```\n");
 				sb.append (c.docs.strip ());
 				tr.find_type (c.name).docs = sb.str;
 			}
 			load_methods (tr);
 		}
-		static void load_methods (TypeRegistry tr) {
+
+		static void load_methods (TypeRegistry tr) throws IOError {
 			var data_copy = new uint8[meson_lsp_method_docs_data_len];
 			Posix.memcpy (data_copy, &meson_lsp_method_docs_data, meson_lsp_method_docs_data_len);
 			var mis = new MemoryInputStream.from_data (data_copy);
-			var dis = new DataInputStream(mis);
+			var dis = new DataInputStream (mis);
 			var byte = dis.read_byte ();
 			assert (byte == 0x55 && "Does not match 0x55" != null);
 			byte = dis.read_byte ();
 			assert (byte == 0xaa && "Does not match 0xaa" != null);
 			var bytes_read = 2u;
 			var bytes_left = meson_lsp_method_docs_data_len - 2;
-			var n_classes = dis.read_uint16();
+			dis.read_uint16 ();
 			bytes_read += 2;
 			bytes_left -= 2;
 			var methods = new Gee.ArrayList<DocMethod>();
 			while (bytes_left != 0) {
-				var has_obj = dis.read_byte() == 0x1;
+				var has_obj = dis.read_byte () == 0x1;
 				bytes_read++;
 				bytes_left--;
-				var c = new DocMethod();
-				var len = dis.read_uint32();
+				var c = new DocMethod ();
+				var len = dis.read_uint32 ();
 				bytes_read += 4;
 				bytes_left -= 4;
 				assert (len < bytes_left);
 				var bytes = new uint8[len];
-				Posix.memset(bytes, 0, len);
-				dis.read(bytes);
+				Posix.memset (bytes, 0, len);
+				dis.read (bytes);
 				bytes_read += len;
 				bytes_left -= len;
 				bytes += 0;
-				var m_name = (string)bytes;
+				var m_name = (string) bytes;
 				c.name = m_name;
 				if (has_obj) {
-					len = dis.read_uint32();
+					len = dis.read_uint32 ();
 					bytes_read += 4;
 					bytes_left -= 4;
 					assert (len < bytes_left);
 					bytes = new uint8[len];
-					Posix.memset(bytes, 0, len);
-					dis.read(bytes);
+					Posix.memset (bytes, 0, len);
+					dis.read (bytes);
 					bytes_read += len;
 					bytes_left -= len;
 					bytes += 0;
-					var obj_name = (string)bytes;
+					var obj_name = (string) bytes;
 					c.obj = obj_name;
 				}
-				len = dis.read_uint32();
+				len = dis.read_uint32 ();
 				bytes_read += 4;
 				bytes_left -= 4;
 				bytes = new uint8[len];
-				Posix.memset(bytes, 0, len);
-				dis.read(bytes);
+				Posix.memset (bytes, 0, len);
+				dis.read (bytes);
 				assert (len <= bytes_left);
 				bytes_read += len;
 				bytes_left -= len;
 				bytes += 0;
-				var docs = (string)bytes;
+				var docs = (string) bytes;
 				c.docs = docs;
 				methods.add (c);
 				info ("Extracted method %s (in object %s)", c.name, c.obj);

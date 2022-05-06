@@ -115,4 +115,27 @@ namespace Meson {
 		public MarkupContent contents { get; set; }
 		public Range range { get; set; }
 	}
+
+	class Diagnostic : Object {
+		public Range range { get; set; }
+		public DiagnosticSeverity severity { get; set; }
+		public string? code { get; set; }
+		public string? source { get; set; }
+		public string message { get; set; }
+		internal string file { get; set; }
+
+		internal Diagnostic.error (SourceReference reference, string message) {
+			this.file = reference.file;
+			this.range = reference.to_lsp_range ();
+			this.severity = DiagnosticSeverity.Error;
+			this.message = message;
+		}
+	}
+	enum DiagnosticSeverity {
+		Unset = 0,
+		Error = 1,
+		Warning = 2,
+		Information = 3,
+		Hint = 4
+	}
 }
