@@ -794,6 +794,9 @@ namespace Meson {
 	}
 
 	class IntegerLiteral : Expression {
+		internal override MesonType deduce_type (MesonEnv env) {
+			return new Elementary (ElementaryType.INT);
+		}
 		internal int64 val;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -822,6 +825,9 @@ namespace Meson {
 	}
 
 	class BooleanLiteral : Expression {
+		internal override MesonType deduce_type (MesonEnv env) {
+			return new Elementary (ElementaryType.BOOL);
+		}
 		internal bool val;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -843,6 +849,9 @@ namespace Meson {
 	}
 
 	class StringLiteral : Expression {
+		internal override MesonType deduce_type (MesonEnv env) {
+			return new Elementary (ElementaryType.STR);
+		}
 		internal string val;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
