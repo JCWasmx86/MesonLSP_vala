@@ -205,7 +205,7 @@ namespace Meson {
 				break;
 			}
 			critical ("Unknown thing: %s", child.type ());
-			return null;
+			assert_not_reached ();
 		}
 	}
 	class CodeNode : GLib.Object {

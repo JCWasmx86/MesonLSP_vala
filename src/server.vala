@@ -31,7 +31,11 @@ namespace Meson {
 			this.tr = new TypeRegistry ();
 			tr.init ();
 			this.options = new Gee.HashMap<string, MesonOption> ();
-			Meson.DocPopulator.populate_docs (tr);
+			try {
+				Meson.DocPopulator.populate_docs (tr);
+			} catch (Error e) {
+				error ("Meson::DocPopulator failed (SHOULD NEVER HAPPEN!): %s ", e.message);
+			}
 		}
 
 		protected override void notification (Jsonrpc.Client client, string method, Variant parameters) {
@@ -48,19 +52,24 @@ namespace Meson {
 
 		protected override bool handle_call (Jsonrpc.Client client, string method, Variant id, Variant parameters) {
 			info ("Received call %s", method);
-			switch (method) {
-			case "initialize":
-				this.initialize (client, id, parameters);
-				break;
-			case "textDocument/documentSymbol":
-				this.document_symbol (client, id, parameters);
-				break;
-			case "textDocument/definition":
-				this.definition (client, id, parameters);
-				break;
-			case "textDocument/hover":
-				this.hover (client, id, parameters);
-				break;
+			try {
+				switch (method) {
+				case "initialize":
+					this.initialize (client, id, parameters);
+					break;
+				case "textDocument/documentSymbol":
+					this.document_symbol (client, id, parameters);
+					break;
+				case "textDocument/definition":
+					this.definition (client, id, parameters);
+					break;
+				case "textDocument/hover":
+					this.hover (client, id, parameters);
+					break;
+				}
+			} catch (Error e) {
+				client.reply_error_async (id, Jsonrpc.ClientError.INTERNAL_ERROR, "Error: %s".printf (e.message), null);
+				return false;
 			}
 			return true;
 		}
@@ -222,7 +231,7 @@ namespace Meson {
 		internal void load_tree (Jsonrpc.Client client, Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>()) throws GLib.Error {
 			if (this.tree != null && this.tree.child_files != null) {
 				foreach (var file in this.tree.child_files) {
-					var uri = Uri.parse (file, UriFlags.NONE);
+					var uri = Uri.parse (File.new_for_path (file).get_uri (), UriFlags.NONE);
 					var diags = new Variant.array (VariantType.VARIANT, new Variant[] {});
 					client.send_notification ("textDocument/publishDiagnostics",
 					                          build_dict (

@@ -13,4 +13,3 @@ encode_method_docs = executable('encode_method_docs', 'docs/encode_method_docs.v
 subdir('docs')
 subdir('parser')
 subdir('src')
-meson.version()
