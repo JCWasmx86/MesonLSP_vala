@@ -243,10 +243,20 @@ namespace Meson {
 		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			foreach (var expr in this.conditions) {
 				expr.fill_diagnostics (env, diagnostics);
-				var type = expr.deduce_type (env);
-				if (!(type is ElementaryType)) {
-					var t = ((Elementary) type).type;
-					if (t != ElementaryType.BOOL && t != ElementaryType.NOT_DEDUCEABLE) {
+				var types = expr.deduce_types (env);
+				if (types.size > 0) {
+					var type = types[0];
+					if (!(type is ElementaryType)) {
+						var t = ((Elementary) type).type;
+						if (t != ElementaryType.BOOL && t != ElementaryType.NOT_DEDUCEABLE) {
+							diagnostics.add (
+								new Diagnostic.error (
+									expr.sref,
+									"Condition is not boolean"
+								)
+							);
+						}
+					} else {
 						diagnostics.add (
 							new Diagnostic.error (
 								expr.sref,
@@ -254,13 +264,6 @@ namespace Meson {
 							)
 						);
 					}
-				} else {
-					diagnostics.add (
-						new Diagnostic.error (
-							expr.sref,
-							"Condition is not boolean"
-						)
-					);
 				}
 			}
 			foreach (var block in this.blocks) {
@@ -391,14 +394,17 @@ namespace Meson {
 
 		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			this.id.fill_diagnostics (env, diagnostics);
-			var type = this.id.deduce_type (env);
-			if (!(type is MList || type is Dictionary)) {
-				diagnostics.add (
-					new Diagnostic.error (
-						id.sref,
-						"%s is not iterateable".printf (type.to_string ())
-					)
-				);
+			var types = this.id.deduce_types (env);
+			if (types.size > 0) {
+				var type = types[0];
+				if (!(type is MList || type is Dictionary)) {
+					diagnostics.add (
+						new Diagnostic.error (
+							id.sref,
+							"%s is not iterateable".printf (type.to_string ())
+						)
+					);
+				}
 			}
 			foreach (var id in this.identifiers) {
 				if (!(id is Identifier)) {
@@ -673,8 +679,8 @@ namespace Meson {
 			}
 		}
 
-		internal virtual MesonType deduce_type (MesonEnv env) {
-			return new Elementary (ElementaryType.NOT_DEDUCEABLE);
+		internal virtual Gee.List<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (new Elementary (ElementaryType.NOT_DEDUCEABLE));
 		}
 	}
 
@@ -794,8 +800,8 @@ namespace Meson {
 	}
 
 	class IntegerLiteral : Expression {
-		internal override MesonType deduce_type (MesonEnv env) {
-			return new Elementary (ElementaryType.INT);
+		internal override Gee.List<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (new Elementary (ElementaryType.INT));
 		}
 		internal int64 val;
 
@@ -825,8 +831,8 @@ namespace Meson {
 	}
 
 	class BooleanLiteral : Expression {
-		internal override MesonType deduce_type (MesonEnv env) {
-			return new Elementary (ElementaryType.BOOL);
+		internal override Gee.List<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (new Elementary (ElementaryType.BOOL));
 		}
 		internal bool val;
 
@@ -849,8 +855,8 @@ namespace Meson {
 	}
 
 	class StringLiteral : Expression {
-		internal override MesonType deduce_type (MesonEnv env) {
-			return new Elementary (ElementaryType.STR);
+		internal override Gee.List<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (new Elementary (ElementaryType.STR));
 		}
 		internal string val;
 
@@ -1306,6 +1312,14 @@ namespace Meson {
 			ret.sref = new SourceReference (filename, tsn);
 			ret.outer = Expression.parse (data, filename, tsn.named_child (0));
 			ret.inner = Expression.parse (data, filename, tsn.named_child (1));
+			return ret;
+		}
+	}
+
+	class ListUtils {
+		internal static Gee.List<MesonType> of (MesonType t) {
+			var ret = new Gee.ArrayList<MesonType>();
+			ret.add(t);
 			return ret;
 		}
 	}
