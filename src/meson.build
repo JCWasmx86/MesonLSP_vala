@@ -6,6 +6,7 @@ mesonlsp_sources = [
 	'util.vala',
 	'protocol.vala',
 	'obj/doc_populator.vala',
+	'obj/populate.vala',
 	'obj/type_registry.vala'
 ]
 

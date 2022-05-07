@@ -37,8 +37,7 @@ You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin
 - gtk
 - mesa
 - glib
-### Parsing fails
-- systemd (Parser bug)
+- systemd
 
 ## Issues
 - Parsing big projects (E.g. mesa) leads to stuttering

@@ -183,7 +183,7 @@ namespace Meson {
 					info ("SKIP: %s", method.name);
 				} else {
 					var type = tr.find_type (method.obj);
-					var m = type.find_method (method.name);
+					var m = type.find_method_safe (method.name);
 					m.doc = method.docs;
 				}
 			}
