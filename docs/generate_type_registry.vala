@@ -55,6 +55,8 @@ public static int main (string[] argv) {
 		return a.ascii_casecmp (b);
 	});
 	foreach (var t in type_names) {
+		if (ret.objects[t].name.has_prefix ("cmake"))
+			continue;
 		var super_class = ret.objects[t].super_class;
 		sb.append ("\t\ttr.register_type(\"").append (t).append("\", \"").append (super_class == null ? "" : super_class).append("\");\n");
 	}
@@ -76,6 +78,8 @@ public static int main (string[] argv) {
 		sb.append("\t\t\t}, ").append ((f.varargs != null).to_string ()).append (");\n");
 	}
 	foreach (var obj in ret.objects.entries) {
+		if (obj.value.name.has_prefix ("cmake"))
+			continue;
 		var o = obj.value;
 		foreach (var fu in o.methods) {
 			var f = fu.value;

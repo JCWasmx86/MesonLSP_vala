@@ -14,7 +14,6 @@ namespace Meson {
 		tr.register_type("external_program", "");
 		tr.register_type("dep", "");
 		tr.register_type("any", "");
-		tr.register_type("cmake_options", "");
 		tr.register_type("str", "");
 		tr.register_type("custom_idx", "");
 		tr.register_type("file", "");
@@ -22,7 +21,6 @@ namespace Meson {
 		tr.register_type("tgt", "");
 		tr.register_type("generated_list", "");
 		tr.register_type("disabler", "");
-		tr.register_type("cmake", "");
 		tr.register_type("dict", "");
 		tr.register_type("build_machine", "");
 		tr.register_type("feature", "");
@@ -1063,10 +1061,6 @@ namespace Meson {
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.ANY),
 			}, false);
-		tr.find_type("cmake").register_function("subproject_options", new ParameterBuilder ()
-			.build (), new MesonType[] {
-								tr.find_type("cmake_options"),
-			}, false);
 		tr.find_type("disabler").register_function("found", new ParameterBuilder ()
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.BOOL),
@@ -1150,10 +1144,6 @@ namespace Meson {
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.BOOL),
 			}, false);
-		tr.find_type("cmake_options").register_function("add_cmake_defines", new ParameterBuilder ()
-			.build (), new MesonType[] {
-								new Elementary (ElementaryType.VOID),
-			}, true);
 		tr.find_type("dep").register_function("include_type", new ParameterBuilder ()
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.STR),
