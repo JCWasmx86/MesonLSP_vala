@@ -43,6 +43,7 @@ namespace Meson {
 		tr.register_function("add_global_link_arguments", new ParameterBuilder ()
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("language", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
+				.register_argument ("Linker argument", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -93,6 +94,7 @@ namespace Meson {
 				.register_kwarg_argument ("install_mode", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT)})})
 				.register_kwarg_argument ("locale", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("install_dir", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("file", new MesonType[] {tr.find_type("file"), new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -102,6 +104,7 @@ namespace Meson {
 				.register_kwarg_argument ("rename", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("install_tag", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("install_dir", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("file", new MesonType[] {tr.find_type("file"), new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -173,6 +176,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("build_tgt"),
 			}, true);
@@ -200,6 +204,7 @@ namespace Meson {
 				.register_kwarg_argument ("version", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file")})
 				.register_kwarg_argument ("subproject_dir", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("license", new MesonType[] {new Elementary (ElementaryType.STR), new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
+				.register_argument ("language", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -222,6 +227,7 @@ namespace Meson {
 				.register_kwarg_argument ("version", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("disabler", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("fallback", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)}), new Elementary (ElementaryType.STR)})
+				.register_argument ("names", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								tr.find_type("dep"),
 			}, true);
@@ -265,12 +271,14 @@ namespace Meson {
 			}, false);
 		tr.register_function("warning", new ParameterBuilder ()
 				.register_argument ("text", new MesonType[] {new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)})}, false)
+				.register_argument ("more_text", new MesonType[] {new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)})}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
 		tr.register_function("install_emptydir", new ParameterBuilder ()
 				.register_kwarg_argument ("install_mode", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT)})})
 				.register_kwarg_argument ("install_tag", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("dirpath", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -286,6 +294,7 @@ namespace Meson {
 			}, false);
 		tr.register_function("include_directories", new ParameterBuilder ()
 				.register_kwarg_argument ("is_system", new MesonType[] {new Elementary (ElementaryType.BOOL)})
+				.register_argument ("includes", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								tr.find_type("inc"),
 			}, true);
@@ -297,6 +306,7 @@ namespace Meson {
 				.register_kwarg_argument ("env", new MesonType[] {tr.find_type("env"), new MList (new MesonType[]{new Elementary (ElementaryType.STR)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("capture", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("check", new MesonType[] {new Elementary (ElementaryType.BOOL)})
+				.register_argument ("command", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("runresult"),
 			}, true);
@@ -307,6 +317,7 @@ namespace Meson {
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("version", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("disabler", new MesonType[] {new Elementary (ElementaryType.BOOL)})
+				.register_argument ("fallback", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("external_program"),
 			}, true);
@@ -321,17 +332,20 @@ namespace Meson {
 		tr.register_function("add_project_dependencies", new ParameterBuilder ()
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("language", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
+				.register_argument ("dependencies", new MesonType[] {tr.find_type("dep")}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
 		tr.register_function("debug", new ParameterBuilder ()
 				.register_argument ("message", new MesonType[] {new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)})}, false)
+				.register_argument ("msg", new MesonType[] {new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)})}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
 		tr.register_function("add_global_arguments", new ParameterBuilder ()
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("language", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
+				.register_argument ("Compiler argument", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -343,6 +357,7 @@ namespace Meson {
 		tr.register_function("add_project_link_arguments", new ParameterBuilder ()
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("language", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
+				.register_argument ("Linker argument", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -352,11 +367,13 @@ namespace Meson {
 								new Elementary (ElementaryType.BOOL),
 			}, false);
 		tr.register_function("join_paths", new ParameterBuilder ()
+				.register_argument ("part", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.STR),
 			}, true);
 		tr.register_function("message", new ParameterBuilder ()
 				.register_argument ("text", new MesonType[] {new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)})}, false)
+				.register_argument ("more_text", new MesonType[] {new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)}), new Dictionary (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL)})}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -400,6 +417,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("lib"),
 			}, true);
@@ -460,6 +478,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("jar"),
 			}, true);
@@ -467,6 +486,7 @@ namespace Meson {
 				.register_kwarg_argument ("install_mode", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR), new Elementary (ElementaryType.INT)})})
 				.register_kwarg_argument ("install_dir", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("subdir", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("file", new MesonType[] {tr.find_type("file"), new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -505,6 +525,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("build_tgt"),
 			}, true);
@@ -544,17 +565,20 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("lib"),
 			}, true);
 		tr.register_function("add_project_arguments", new ParameterBuilder ()
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("language", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
+				.register_argument ("Compiler argument", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
 		tr.register_function("alias_target", new ParameterBuilder ()
 				.register_argument ("target_name", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
+				.register_argument ("Dep", new MesonType[] {tr.find_type("tgt")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("alias_tgt"),
 			}, true);
@@ -627,6 +651,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("both_libs"),
 			}, true);
@@ -638,6 +663,7 @@ namespace Meson {
 		tr.register_function("add_languages", new ParameterBuilder ()
 				.register_kwarg_argument ("required", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("native", new MesonType[] {new Elementary (ElementaryType.BOOL)})
+				.register_argument ("Language", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.BOOL),
 			}, true);
@@ -664,11 +690,13 @@ namespace Meson {
 								tr.find_type("custom_tgt"),
 			}, false);
 		tr.register_function("files", new ParameterBuilder ()
+				.register_argument ("file", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new MList (new MesonType[]{tr.find_type("file")}),
 			}, true);
 		tr.register_function("error", new ParameterBuilder ()
 				.register_argument ("message", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
+				.register_argument ("msg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -710,6 +738,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("lib"),
 			}, true);
@@ -759,6 +788,7 @@ namespace Meson {
 				.register_kwarg_argument ("d_module_versions", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("link_depends", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("exe"),
 			}, true);
@@ -786,6 +816,7 @@ namespace Meson {
 			}, false);
 		tr.find_type("meson").register_function("add_postconf_script", new ParameterBuilder ()
 				.register_argument ("script_name", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program")}, false)
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program")}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -807,6 +838,7 @@ namespace Meson {
 			}, false);
 		tr.find_type("meson").register_function("add_dist_script", new ParameterBuilder ()
 				.register_argument ("script_name", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program")}, false)
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program")}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -880,6 +912,7 @@ namespace Meson {
 				.register_argument ("script_name", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program"), tr.find_type("exe"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")}, false)
 				.register_kwarg_argument ("skip_if_destdir", new MesonType[] {new Elementary (ElementaryType.BOOL)})
 				.register_kwarg_argument ("install_tag", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("external_program"), tr.find_type("exe"), tr.find_type("custom_tgt"), tr.find_type("custom_idx")}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -988,18 +1021,21 @@ namespace Meson {
 		tr.find_type("env").register_function("prepend", new ParameterBuilder ()
 				.register_argument ("variable", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 				.register_kwarg_argument ("separator", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("Value", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
 		tr.find_type("env").register_function("set", new ParameterBuilder ()
 				.register_argument ("variable", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 				.register_kwarg_argument ("separator", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("Value", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
 		tr.find_type("env").register_function("append", new ParameterBuilder ()
 				.register_argument ("variable", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 				.register_kwarg_argument ("separator", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("Value", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.VOID),
 			}, true);
@@ -1095,6 +1131,7 @@ namespace Meson {
 			}, false);
 		tr.find_type("str").register_function("format", new ParameterBuilder ()
 				.register_argument ("fmt", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
+				.register_argument ("value", new MesonType[] {new Elementary (ElementaryType.INT), new Elementary (ElementaryType.BOOL), new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.STR),
 			}, true);
@@ -1117,6 +1154,7 @@ namespace Meson {
 								new Elementary (ElementaryType.BOOL),
 			}, false);
 		tr.find_type("str").register_function("join", new ParameterBuilder ()
+				.register_argument ("strings", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.STR),
 			}, true);
@@ -1223,6 +1261,7 @@ namespace Meson {
 			}, false);
 		tr.find_type("compiler").register_function("get_supported_arguments", new ParameterBuilder ()
 				.register_kwarg_argument ("checked", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new MList (new MesonType[]{new Elementary (ElementaryType.STR)}),
 			}, true);
@@ -1263,6 +1302,7 @@ namespace Meson {
 								new Elementary (ElementaryType.INT),
 			}, false);
 		tr.find_type("compiler").register_function("get_supported_link_arguments", new ParameterBuilder ()
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new MList (new MesonType[]{new Elementary (ElementaryType.STR)}),
 			}, true);
@@ -1273,10 +1313,12 @@ namespace Meson {
 				.register_kwarg_argument ("args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("prefix", new MesonType[] {new Elementary (ElementaryType.STR)})
 				.register_kwarg_argument ("no_builtin_args", new MesonType[] {new Elementary (ElementaryType.BOOL)})
+				.register_argument ("member", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.BOOL),
 			}, true);
 		tr.find_type("compiler").register_function("has_multi_arguments", new ParameterBuilder ()
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.BOOL),
 			}, true);
@@ -1292,6 +1334,7 @@ namespace Meson {
 								new Elementary (ElementaryType.BOOL),
 			}, false);
 		tr.find_type("compiler").register_function("first_supported_link_argument", new ParameterBuilder ()
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new MList (new MesonType[]{new Elementary (ElementaryType.STR)}),
 			}, true);
@@ -1362,6 +1405,7 @@ namespace Meson {
 								new Elementary (ElementaryType.BOOL),
 			}, false);
 		tr.find_type("compiler").register_function("has_multi_link_arguments", new ParameterBuilder ()
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new Elementary (ElementaryType.BOOL),
 			}, true);
@@ -1415,6 +1459,7 @@ namespace Meson {
 								tr.find_type("dep"),
 			}, false);
 		tr.find_type("compiler").register_function("first_supported_argument", new ParameterBuilder ()
+				.register_argument ("arg", new MesonType[] {new Elementary (ElementaryType.STR)}, false)
 			.build (), new MesonType[] {
 								new MList (new MesonType[]{new Elementary (ElementaryType.STR)}),
 			}, true);
@@ -1453,6 +1498,7 @@ namespace Meson {
 		tr.find_type("generator").register_function("process", new ParameterBuilder ()
 				.register_kwarg_argument ("extra_args", new MesonType[] {new MList (new MesonType[]{new Elementary (ElementaryType.STR)})})
 				.register_kwarg_argument ("preserve_path_from", new MesonType[] {new Elementary (ElementaryType.STR)})
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file"), tr.find_type("custom_tgt"), tr.find_type("custom_idx"), tr.find_type("generated_list")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("generated_list"),
 			}, true);
@@ -1493,6 +1539,7 @@ namespace Meson {
 								new Elementary (ElementaryType.BOOL),
 			}, false);
 		tr.find_type("build_tgt").register_function("extract_objects", new ParameterBuilder ()
+				.register_argument ("source", new MesonType[] {new Elementary (ElementaryType.STR), tr.find_type("file")}, false)
 			.build (), new MesonType[] {
 								tr.find_type("extracted_obj"),
 			}, true);

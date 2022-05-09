@@ -44,6 +44,9 @@ namespace Meson {
 		internal string file;
 
 		internal SourceReference (string filename, TreeSitter.TSNode node) {
+			info (">>%s", filename);
+			if (filename.contains ("\n"))
+				critical ("Foo");
 			this.file = filename;
 			this.start_line = node.start_point ().row;
 			this.start_column = node.start_point ().column;
@@ -401,7 +404,7 @@ namespace Meson {
 					diagnostics.add (
 						new Diagnostic.error (
 							id.sref,
-							"%s is not iterateable".printf (type.to_string ())
+							"%s is not iterable".printf (type.to_string ())
 						)
 					);
 				}
@@ -1025,6 +1028,12 @@ namespace Meson {
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			if (this.name_ref.contains (file, pos)) {
+				var hover = new Hover ();
+				hover.range = this.sref.to_lsp_range ();
+				hover.contents = new MarkupContent ();
+				hover.contents.kind = "markdown";
+				hover.contents.value = tr.find_function (this.name).generate_docs();
+				return hover;
 				// TODO: Load info from TypeRegistry
 			} else if (this.arg_list != null && this.arg_list.sref.contains (file, pos) && this.name == "get_option") {
 				var args = arg_list.args;
@@ -1073,7 +1082,7 @@ namespace Meson {
 		internal static new FunctionExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
 			assert (tsn.type () == "function_expression");
 			var ret = new FunctionExpression ();
-			ret.name_ref = new SourceReference (data, tsn.named_child (0));
+			ret.name_ref = new SourceReference (filename, tsn.named_child (0));
 			ret.sref = new SourceReference (filename, tsn);
 			ret.name = Util.get_string_value (data, tsn.named_child (0));
 			if (tsn.named_child_count () == 2) {

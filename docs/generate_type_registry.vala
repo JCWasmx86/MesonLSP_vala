@@ -72,6 +72,11 @@ public static int main (string[] argv) {
 		foreach (var arg in f.kwargs.values) {
 			sb.append ("\t\t\t\t.register_kwarg_argument (\"").append (arg.name).append("\", ").append (arg.array ()).append (")\n");
 		}
+		if (f.varargs != null) {
+			sb.append ("\t\t\t\t.register_argument (\"")
+				.append (f.varargs.name).append("\", ")
+				.append (f.varargs.array ()).append (", ").append(f.varargs.is_optional.to_string()).append(")\n");
+		}
 		sb.append ("\t\t\t.build (), new MesonType[] {\n\t\t\t\t");
 		foreach (var r in f.returns)
 			sb.append ("\t\t\t\t").append (r.to_string ()).append (",\n");
@@ -92,6 +97,11 @@ public static int main (string[] argv) {
 			}
 			foreach (var arg in f.kwargs.values) {
 				sb.append ("\t\t\t\t.register_kwarg_argument (\"").append (arg.name).append("\", ").append (arg.array ()).append (")\n");
+			}
+			if (f.varargs != null) {
+				sb.append ("\t\t\t\t.register_argument (\"")
+					.append (f.varargs.name).append("\", ")
+					.append (f.varargs.array ()).append (", ").append(f.varargs.is_optional.to_string()).append(")\n");
 			}
 			sb.append ("\t\t\t.build (), new MesonType[] {\n\t\t\t\t");
 			foreach (var r in f.returns)
@@ -147,6 +157,7 @@ class TypeObject {
 }
 class Argument {
 	internal string name;
+	internal bool is_optional;
 	Gee.List<TypeObject> types {get; set; default = new Gee.ArrayList<TypeObject>();}
 
 	internal static Argument parse (Json.Object obj) {
@@ -156,6 +167,11 @@ class Argument {
 		foreach (var m in t.get_elements ()) {
 			var obj1 = m.get_object();
 			ret.types.add (TypeObject.parse (obj1));
+		}
+		ret.is_optional = false;
+		var min_varargs = obj.get_member ("min_varargs");
+		if (min_varargs.get_node_type() != Json.NodeType.NULL) {
+			ret.is_optional = min_varargs.get_int() == 0;
 		}
 		return ret;
 	}

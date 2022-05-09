@@ -44,6 +44,14 @@ namespace Meson {
 			this.types.add (obj);
 		}
 
+		internal Method? find_function (string name) {
+			foreach (var t in this.functions) {
+				if (t.name == name)
+					return t;
+			}
+			return null;
+		}
+
 		internal ObjectType find_type (string obj_name) {
 			foreach (var t in this.types) {
 				if (t is ObjectType && ((ObjectType) t).name == obj_name) {
@@ -80,9 +88,9 @@ namespace Meson {
 		internal ParameterBuilder register_argument (string name, MesonType[] alternatives, bool optional = false) {
 			var p = new Parameter ();
 			p.name = name;
-			p.is_keyword = true;
+			p.is_keyword = false;
 			p.possible_types.add_all_array (alternatives);
-			p.required = optional;
+			p.required = !optional;
 			this.arr.add (p);
 			return this;
 		}
@@ -129,15 +137,17 @@ namespace Meson {
 
 	internal class Method {
 		internal string name;
-		internal string doc;
+		internal string? doc;
 		internal Gee.List<Parameter> parameters;
 		internal bool varargs;
 		internal Gee.List<MesonType> return_type;
 
 		internal string generate_docs () {
 			var sb = new StringBuilder ();
-			sb.append ("`").append (this.name).append ("`\n\n").append (this.doc);
-			sb.append ("\n```\n");
+			sb.append ("`").append (this.name).append ("`\n\n");
+			if (this.doc != null)
+				sb.append (this.doc).append("\n");
+			sb.append ("```\n");
 			sb.append (this.return_type_doc ()).append (" ").append (this.name);
 			if (this.parameters.size == 0)
 				sb.append (" ();");
@@ -146,13 +156,16 @@ namespace Meson {
 				var kw = new StringBuilder ();
 				var p = new StringBuilder ();
 				foreach (var param in this.parameters) {
+					if (!param.is_keyword) {
+						p.append ("    ").append (param.type_string ())
+						 .append (" ").append (param.name).append (",\n");
+					}
+				}
+				foreach (var param in this.parameters) {
 					if (param.is_keyword) {
 						kw.append ("    ").append (param.name)
 						 .append (": ").append (param.type_string ())
 						 .append (param.required ? "(optional),\n" : ",\n");
-					} else {
-						p.append ("    ").append (param.type_string ())
-						 .append (" ").append (param.name).append (",\n");
 					}
 				}
 				sb.append (p.str).append (kw.str);
