@@ -99,7 +99,7 @@ namespace Meson {
 			return this.file;
 		}
 
-		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches) {
+		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches = new Gee.HashMap<string, string>()) {
 			var ret = new SymbolTree ();
 			ret.patches = patches;
 			var file = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), "meson.build");

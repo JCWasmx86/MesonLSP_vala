@@ -44,9 +44,6 @@ namespace Meson {
 		internal string file;
 
 		internal SourceReference (string filename, TreeSitter.TSNode node) {
-			info (">>%s", filename);
-			if (filename.contains ("\n"))
-				critical ("Foo");
 			this.file = filename;
 			this.start_line = node.start_point ().row;
 			this.start_column = node.start_point ().column;
