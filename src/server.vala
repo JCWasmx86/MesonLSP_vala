@@ -234,11 +234,15 @@ namespace Meson {
 					var uri = Uri.parse (File.new_for_path (file).get_uri (), UriFlags.NONE);
 					var diags = new Variant.array (VariantType.VARIANT, new Variant[] {});
 					client.send_notification ("textDocument/publishDiagnostics",
-					                          build_dict (
+											  build_dict (
 												  uri: new Variant.string (uri.to_string ()),
 												  diagnostics: diags
 					));
 				}
+			}
+			if (!File.new_for_path (dir.get_path () + "/meson.build").query_exists ()) {
+				info ("No meson");
+				return;
 			}
 			this.options.clear ();
 			var start = GLib.get_real_time () / 1000.0;
@@ -247,7 +251,7 @@ namespace Meson {
 			var end = GLib.get_real_time () / 1000.0;
 			info ("Built tree in %lfms", (end - start));
 			var diagnostics = new Gee.ArrayList<Diagnostic>();
-			var env = new MesonEnv ();
+			var env = new MesonEnv (this.tr);
 			var hash_map = new Gee.HashMap<string, Gee.List<Diagnostic> >();
 			foreach (var diagnostic in diagnostics) {
 				var file = diagnostic.file;

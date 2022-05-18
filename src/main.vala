@@ -38,14 +38,14 @@ int main (string[] args) {
 		var end = GLib.get_real_time () / 1000.0;
 		stdout.printf ("Parsed the file 1000 times in %lfms\n", (end - start));
 		return 0;
-	} else if (args.length == 2 && args[1].has_prefix("file:///")) {
+	} else if (args.length == 2 && args[1].has_prefix ("file:///")) {
 		var start = GLib.get_real_time () / 1000.0;
 		for (var i = 0; i < 1000; i++) {
 			var tr = new Meson.TypeRegistry ();
 			tr.init ();
 			Meson.DocPopulator.populate_docs (tr);
-			var tree = Meson.SymbolTree.build (Uri.parse(args[1], UriFlags.NONE));
-			tree.merge();
+			var tree = Meson.SymbolTree.build (Uri.parse (args[1], UriFlags.NONE));
+			tree.merge ();
 		}
 		var end = GLib.get_real_time () / 1000.0;
 		stdout.printf ("Built 1000 trees in %lfms\n", (end - start));

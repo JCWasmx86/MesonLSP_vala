@@ -72,6 +72,7 @@ I had these requirements for the language server:
 3. Fast compile times
 4. Highlevel language
 5. Interop with C
+
 Some would consider rust a good candidate, but 4. is a dealbreaker for me,
 as fast compile times are needed for my style of development and the final binaries are massive.
 

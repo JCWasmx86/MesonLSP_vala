@@ -75,7 +75,7 @@ public static int main (string[] argv) {
 		if (f.varargs != null) {
 			sb.append ("\t\t\t\t.register_argument (\"")
 				.append (f.varargs.name).append("\", ")
-				.append (f.varargs.array ()).append (", ").append(f.varargs.is_optional.to_string()).append(")\n");
+				.append (f.varargs.array ()).append (", ").append(f.varargs.is_optional.to_string()).append(", true)\n");
 		}
 		sb.append ("\t\t\t.build (), new MesonType[] {\n\t\t\t\t");
 		foreach (var r in f.returns)
@@ -101,7 +101,7 @@ public static int main (string[] argv) {
 			if (f.varargs != null) {
 				sb.append ("\t\t\t\t.register_argument (\"")
 					.append (f.varargs.name).append("\", ")
-					.append (f.varargs.array ()).append (", ").append(f.varargs.is_optional.to_string()).append(")\n");
+					.append (f.varargs.array ()).append (", ").append(f.varargs.is_optional.to_string()).append(", true)\n");
 			}
 			sb.append ("\t\t\t.build (), new MesonType[] {\n\t\t\t\t");
 			foreach (var r in f.returns)
@@ -135,7 +135,7 @@ class TypeObject {
 			case "int":
 			case "void":
 			case "any":
-				return "new Elementary (ElementaryType." + this.type.up () + ")";
+				return "Elementary." + this.type.up ();
 			case "dict":
 				var sb = new StringBuilder ();
 				sb.append ("new Dictionary (new MesonType[]{");

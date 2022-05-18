@@ -101,9 +101,9 @@ namespace Meson {
 	}
 
 	class TextDocumentContentChangeEvent : Object {
-		public Range? range    { get; set; }
+		public Range? range	{ get; set; }
 		public int rangeLength { get; set; }
-		public string text     { get; set; }
+		public string text	 { get; set; }
 	}
 
 	class MarkupContent : Object {

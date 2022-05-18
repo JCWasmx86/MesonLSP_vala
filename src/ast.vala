@@ -25,12 +25,40 @@ namespace Meson {
 	class MesonEnv {
 		Gee.List<VariableJar> stack { get; default = new Gee.ArrayList<VariableJar>(); }
 		Gee.List<VariablePos> positions { get; default = new Gee.ArrayList<VariablePos> (); }
+
+		internal MesonEnv (TypeRegistry tr) {
+			this.registry = tr;
+			this.register ("meson", null, ListUtils.of (tr.find_type ("meson")));
+		}
+
+		internal void register (string name, SourceReference? sref, Gee.Set<MesonType> deduces) {
+			var p = new VariablePos ();
+			p.name = name;
+			p.sref = sref;
+			p.deduced_types.add_all (deduces);
+			this.positions.add (p);
+		}
+
+		internal Gee.Set<MesonType> find_identifier (string name) {
+			info ("Locating %s", name);
+			var size = this.positions.size;
+			if (size == 0) {
+				return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+			}
+			for (var i = size - 1; i >= 0; i--) {
+				if (this.positions[i].name == name)
+					return this.positions[i].deduced_types;
+			}
+			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+		}
+
 		internal TypeRegistry registry;
 	}
 	class VariablePos {
 		internal string name;
-		internal SourceReference sref;
-		internal Gee.List<MesonType> deduced_types { get; default = new Gee.ArrayList<MesonType>(); }
+		internal SourceReference? sref;
+		internal bool assignment;
+		internal Gee.Set<MesonType> deduced_types { get; default = new Gee.HashSet<MesonType>(); }
 	}
 	class VariableJar {
 		// <name> <possibleTypes>
@@ -245,7 +273,7 @@ namespace Meson {
 				expr.fill_diagnostics (env, diagnostics);
 				var types = expr.deduce_types (env);
 				if (types.size > 0) {
-					var type = types[0];
+					var type = types.to_array ()[0];
 					if (!(type is ElementaryType)) {
 						var t = ((Elementary) type).type;
 						if (t != ElementaryType.BOOL && t != ElementaryType.NOT_DEDUCEABLE) {
@@ -396,7 +424,7 @@ namespace Meson {
 			this.id.fill_diagnostics (env, diagnostics);
 			var types = this.id.deduce_types (env);
 			if (types.size > 0) {
-				var type = types[0];
+				var type = types.to_array ()[0];
 				if (!(type is MList || type is Dictionary)) {
 					diagnostics.add (
 						new Diagnostic.error (
@@ -529,6 +557,12 @@ namespace Meson {
 		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			lhs.fill_diagnostics (env, diagnostics);
 			rhs.fill_diagnostics (env, diagnostics);
+			var types = rhs.deduce_types (env);
+			info ("Deduced in %s:", this.sref.to_string ());
+			if (lhs is Identifier)
+				env.register (((Identifier) lhs).name, this.lhs.sref, types);
+			foreach (var t in types)
+				info ("\t%s", t.to_string ());
 			// list: =,+= is allowed
 			// dict: =,+= is allowed
 			// str: =
@@ -679,8 +713,8 @@ namespace Meson {
 			}
 		}
 
-		internal virtual Gee.List<MesonType> deduce_types (MesonEnv env) {
-			return ListUtils.of (new Elementary (ElementaryType.NOT_DEDUCEABLE));
+		internal virtual Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 		}
 	}
 
@@ -699,6 +733,10 @@ namespace Meson {
 				return null;
 			return this.name;
 		}
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			return env.find_identifier (this.name);
+		}
+
 		internal string name;
 		internal Identifier (string name, string filename, TreeSitter.TSNode tsn) {
 			this.sref = new SourceReference (filename, tsn);
@@ -729,6 +767,15 @@ namespace Meson {
 			}
 			return null;
 		}
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var ret = new Gee.ArrayList<MesonType>();
+			foreach (var r in keys) {
+				ret.add_all (r.deduce_types (env));
+			}
+			var mdict = new Dictionary (ret.to_array ());
+			return ListUtils.of (mdict);
+		}
+
 		internal Gee.List<Expression> keys { get; set; default = new Gee.ArrayList<Expression> (); }
 		internal Gee.List<Expression> values { get; set; default = new Gee.ArrayList<Expression> (); }
 
@@ -775,6 +822,16 @@ namespace Meson {
 			}
 			return null;
 		}
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var ret = new Gee.HashSet<MesonType>();
+			foreach (var e in elements)
+				ret.add_all (e.deduce_types (env));
+			var list = new MList (ret.to_array ());
+			var r = new Gee.HashSet<MesonType>();
+			r.add (list);
+			return r;
+		}
+
 		internal Gee.List<Expression> elements { get; set; default = new Gee.ArrayList<Expression> (); }
 		internal override string? find_identifier (string file, Position pos) {
 			if (!this.sref.contains (file, pos))
@@ -800,9 +857,10 @@ namespace Meson {
 	}
 
 	class IntegerLiteral : Expression {
-		internal override Gee.List<MesonType> deduce_types (MesonEnv env) {
-			return ListUtils.of (new Elementary (ElementaryType.INT));
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (Elementary.INT);
 		}
+
 		internal int64 val;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -831,9 +889,10 @@ namespace Meson {
 	}
 
 	class BooleanLiteral : Expression {
-		internal override Gee.List<MesonType> deduce_types (MesonEnv env) {
-			return ListUtils.of (new Elementary (ElementaryType.BOOL));
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (Elementary.BOOL);
 		}
+
 		internal bool val;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -855,9 +914,10 @@ namespace Meson {
 	}
 
 	class StringLiteral : Expression {
-		internal override Gee.List<MesonType> deduce_types (MesonEnv env) {
-			return ListUtils.of (new Elementary (ElementaryType.STR));
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			return ListUtils.of (Elementary.STR);
 		}
+
 		internal string val;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
@@ -920,6 +980,23 @@ namespace Meson {
 			}
 			return null;
 		}
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var object = obj.deduce_types (env);
+			var ret = new Gee.HashSet<MesonType>();
+			foreach (var t in object) {
+				if (t is ObjectType) {
+					var o = (ObjectType) t;
+					var m = o.find_method_safe (this.name);
+					if (m != null) {
+						ret.add_all (m.return_type);
+					}
+				}
+			}
+			if (!ret.is_empty)
+				return ret;
+			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+		}
+
 		internal Expression obj;
 		internal string name;
 		internal SourceReference name_ref;
@@ -975,6 +1052,15 @@ namespace Meson {
 			return this.if_false.hover (tr, file, pos, ctx);
 		}
 
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var ret = new Gee.HashSet<MesonType>();
+			ret.add_all (if_true.deduce_types (env));
+			ret.add_all (if_false.deduce_types (env));
+			var r = new Gee.HashSet<MesonType>();
+			r.add_all (ret);
+			return r;
+		}
+
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
 			this.condition.document_symbols (path, into);
 			this.if_true.document_symbols (path, into);
@@ -1023,13 +1109,23 @@ namespace Meson {
 			return this.arg_list.jump_to_subdir (file, pos);
 		}
 
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var r = env.registry.find_function (this.name);
+			if (r != null) {
+				var s = new Gee.HashSet<MesonType>();
+				s.add_all (r.return_type);
+				return s;
+			}
+			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+		}
+
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			if (this.name_ref.contains (file, pos)) {
 				var hover = new Hover ();
 				hover.range = this.sref.to_lsp_range ();
 				hover.contents = new MarkupContent ();
 				hover.contents.kind = "markdown";
-				hover.contents.value = tr.find_function (this.name).generate_docs();
+				hover.contents.value = tr.find_function (this.name).generate_docs ();
 				return hover;
 				// TODO: Load info from TypeRegistry
 			} else if (this.arg_list != null && this.arg_list.sref.contains (file, pos) && this.name == "get_option") {
@@ -1164,6 +1260,34 @@ namespace Meson {
 		internal Expression lhs;
 		internal BinaryOperator op;
 
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var r = rhs.deduce_types (env);
+			var l = lhs.deduce_types (env);
+			switch (this.op) {
+			case BinaryOperator.EQ_EQ:
+			case BinaryOperator.N_EQ:
+			case BinaryOperator.GE:
+			case BinaryOperator.GT:
+			case BinaryOperator.LE:
+			case BinaryOperator.LT:
+			case BinaryOperator.IN:
+			case BinaryOperator.NOT_IN:
+			case BinaryOperator.OR:
+			case BinaryOperator.AND:
+				return ListUtils.of (Elementary.BOOL);
+			case BinaryOperator.SLASH:
+			case BinaryOperator.PLUS:
+				if (ListUtils.contains_elementary (r, ElementaryType.STR)
+					&& ListUtils.contains_elementary (l, ElementaryType.STR))
+					return ListUtils.of (Elementary.STR);
+				else if (ListUtils.contains_elementary (r, ElementaryType.INT)
+						 && ListUtils.contains_elementary (l, ElementaryType.INT))
+					return ListUtils.of (Elementary.INT);
+				break;
+			}
+			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+		}
+
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			var h = rhs.hover (tr, file, pos, ctx);
 			if (h != null)
@@ -1190,7 +1314,8 @@ namespace Meson {
 			var ret = new BinaryExpresssion ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.lhs = Expression.parse (data, filename, tsn.named_child (0));
-			var op = tsn.named_child_count () == 2 ? tsn.named_child (1) : tsn.child (1);
+			var op = tsn.named_child_count () == 2 ? tsn.child (1) : tsn.named_child (1);
+			info ("%s %s", ret.sref.to_string (), Util.get_string_value (data, op));
 			switch (Util.get_string_value (data, op).strip ()) {
 			case "+":
 				ret.op = BinaryOperator.PLUS;
@@ -1237,6 +1362,8 @@ namespace Meson {
 			case "and":
 				ret.op = BinaryOperator.AND;
 				break;
+			default:
+				assert_not_reached ();
 			}
 			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count () == 2 ? 1 : 2));
 			return ret;
@@ -1291,6 +1418,15 @@ namespace Meson {
 		internal Expression inner;
 		internal Expression outer;
 
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			var types = inner.deduce_types (env);
+			if (!(types.to_array ()[0] is MList))
+				return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+			var s = new Gee.HashSet<MesonType>();
+			s.add_all (((MList) types.to_array ()[0]).values);
+			return s;
+		}
+
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
 			var h = this.inner.hover (tr, file, pos, ctx);
 			if (h != null)
@@ -1323,10 +1459,20 @@ namespace Meson {
 	}
 
 	class ListUtils {
-		internal static Gee.List<MesonType> of (MesonType t) {
-			var ret = new Gee.ArrayList<MesonType>();
-			ret.add(t);
+		internal static Gee.Set<MesonType> of (MesonType t) {
+			var ret = new Gee.HashSet<MesonType>();
+			ret.add (t);
 			return ret;
+		}
+
+		internal static bool contains_elementary (Gee.Set<MesonType> t, ElementaryType et) {
+			foreach (var f in t) {
+				if (f is Elementary) {
+					if (((Elementary) f).type == et)
+						return true;
+				}
+			}
+			return false;
 		}
 	}
 }
