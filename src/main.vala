@@ -32,7 +32,8 @@ int main (string[] args) {
 			data_len++;
 			ts.set_language (TreeSitter.tree_sitter_meson ());
 			var root = ts.parse_string (null, data, (uint32) data_len);
-			Meson.SourceFile.build_ast (data, file, root.root_node ());
+			var diagnostics = new Gee.HashSet<Meson.Diagnostic>();
+			Meson.SourceFile.build_ast (data, file, root.root_node (), diagnostics);
 			root.free ();
 		}
 		var end = GLib.get_real_time () / 1000.0;
@@ -44,7 +45,9 @@ int main (string[] args) {
 			var tr = new Meson.TypeRegistry ();
 			tr.init ();
 			Meson.DocPopulator.populate_docs (tr);
-			var tree = Meson.SymbolTree.build (Uri.parse (args[1], UriFlags.NONE));
+			var patches = new Gee.HashMap<string, string>();
+			var diagnostics = new Gee.HashSet<Meson.Diagnostic>();
+			var tree = Meson.SymbolTree.build (Uri.parse (args[1], UriFlags.NONE), patches, diagnostics);
 			tree.merge ();
 		}
 		var end = GLib.get_real_time () / 1000.0;

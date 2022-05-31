@@ -25,9 +25,11 @@ namespace Meson {
 	class MesonEnv {
 		Gee.List<VariableJar> stack { get; default = new Gee.ArrayList<VariableJar>(); }
 		Gee.List<VariablePos> positions { get; default = new Gee.ArrayList<VariablePos> (); }
+		internal Gee.Map<string, MesonOption> options;
 
-		internal MesonEnv (TypeRegistry tr) {
+		internal MesonEnv (TypeRegistry tr, Gee.Map<string, MesonOption> options) {
 			this.registry = tr;
+			this.options = options;
 			this.register ("meson", null, ListUtils.of (tr.find_type ("meson")));
 		}
 
@@ -35,30 +37,122 @@ namespace Meson {
 			var p = new VariablePos ();
 			p.name = name;
 			p.sref = sref;
-			p.deduced_types.add_all (deduces);
+			p.deduced_types.add_all (this.merge (deduces));
 			this.positions.add (p);
+			info ("Registering %s (%u)", name, deduces.size);
+		}
+
+		private Gee.Set<MesonType> merge (Gee.Set<MesonType> d, uint counter = 0) {
+             var a = new Gee.TreeSet<MesonType> (compare_types_func);
+             if (counter == 128) {
+                 info ("CRITICAL-DEPTH reached: %u Fix your build files! (Or meson_lsp could be wrong ^^)", counter);
+                 a.add_all (d);
+                 return a;
+             }
+             var list = new MList(new MesonType[]{});
+             var found_list = false;
+             var found_dict = false;
+             var dict = new Dictionary(new MesonType[]{});
+             foreach (var type in d) {
+                 if (type is MList) {
+                     list.values.add_all (((MList)type).values);
+                     found_list = ((MList)type).values.is_empty;
+                 } else if (type is Dictionary) {
+                     dict.values.add_all(((Dictionary)type).values);
+                     found_dict = ((Dictionary)type).values.is_empty;
+                 } else {
+                     a.add (type);
+                 }
+             }
+             var tmp_set = new Gee.TreeSet<MesonType> (compare_types_func);
+             if (!list.values.is_empty || found_list) {
+                tmp_set.add_all (list.values);
+                a.add (new MList (merge (tmp_set, counter + 1).to_array ()));
+             }
+             tmp_set = new Gee.TreeSet<MesonType> (compare_types_func);
+             if (!dict.values.is_empty || found_dict) {
+                tmp_set.add_all (dict.values);
+                a.add (new Dictionary (merge (tmp_set, counter + 1).to_array ()));
+             }
+             info ("Went from %u to %u entries", d.size, a.size);
+             return a;
 		}
 
 		internal Gee.Set<MesonType> find_identifier (string name) {
-			info ("Locating %s", name);
 			var size = this.positions.size;
 			if (size == 0) {
+				info ("No variables found while checking %s", name);
 				return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 			}
 			for (var i = size - 1; i >= 0; i--) {
-				if (this.positions[i].name == name)
+				if (this.positions[i].name == name) {
 					return this.positions[i].deduced_types;
+				}
 			}
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 		}
 
+		internal void add_types (string name, SourceReference? sref, Gee.Set<MesonType> deduces) {
+		    var old = this.find_identifier (name);
+		    var a = new Gee.TreeSet<MesonType> (compare_types_func);
+		    a.add_all (old);
+		    a.add_all (deduces);
+		    this.register (name, sref, a);
+		}
+
 		internal TypeRegistry registry;
+	}
+	static int compare_types_func (MesonType a, MesonType b) {
+	    if ((a is Elementary) && (b is Elementary)) {
+	        var a1 = ((Elementary)a).type;
+	        var b1 = ((Elementary)b).type;
+	        return (a1 == b1 ? 0 : (a1 < b1 ? -1 : 1));
+	    } else if ((a is MList) && (b is MList)) {
+	        var a1 = ((MList)a).values;
+	        var b1 = ((MList)b).values;
+	        if (a1.contains_all (b1) && b1.contains_all (a1))
+	            return 0;
+	        return a1.size < b1.size ? -1 : 1;
+	    } else if ((a is Dictionary) && (b is Dictionary)) {
+	        var a1 = ((Dictionary)a).values;
+	        var b1 = ((Dictionary)b).values;
+	        if (a1.contains_all (b1) && b1.contains_all (a1))
+	            return 0;
+	        return a1.size < b1.size ? -1 : 1;
+	    } else if (a is Dictionary) {
+	        if (b is Elementary)
+	            return 1;
+	        if (b is MList)
+	            return 1;
+	        if (b is ObjectType)
+	            return 1;
+	    } else if (a is MList) {
+            if (b is Elementary)
+                return -1;
+            if (b is Dictionary)
+                return -1;
+            if (b is ObjectType)
+                return -1;
+	    } else if (a is Elementary) {
+	        if (b is MList)
+	            return -1;
+	        if (b is Dictionary)
+	            return -1;
+	        if (b is ObjectType)
+	            return -1;
+	    }
+	    if (a is ObjectType && !(b is ObjectType)) {
+	        return -1;
+	    } else if (a is ObjectType && (b is ObjectType)) {
+	        return ((ObjectType)a).name.collate (((ObjectType)b).name);
+	    }
+	    error ("%s %s", a.get_type().name(), b.get_type ().name ());
 	}
 	class VariablePos {
 		internal string name;
 		internal SourceReference? sref;
 		internal bool assignment;
-		internal Gee.Set<MesonType> deduced_types { get; default = new Gee.HashSet<MesonType>(); }
+		internal Gee.Set<MesonType> deduced_types { get; default = new Gee.TreeSet<MesonType> (compare_types_func); }
 	}
 	class VariableJar {
 		// <name> <possibleTypes>
@@ -116,7 +210,7 @@ namespace Meson {
 		internal string filename;
 		internal Gee.List<Statement> statements { get; set; default = new Gee.ArrayList<Statement> (); }
 
-		internal static SourceFile build_ast (string data, string filename, TreeSitter.TSNode root) {
+		internal static SourceFile build_ast (string data, string filename, TreeSitter.TSNode root, Gee.Set<Diagnostic> diagnostics) {
 			var ret = new SourceFile ();
 			ret.filename = filename;
 			if (root.named_child_count () == 0) {
@@ -135,7 +229,7 @@ namespace Meson {
 					continue;
 				if (stmt.named_child_count () == 0)
 					continue;
-				ret.statements.add (Statement.parse (data, filename, stmt));
+				ret.statements.add (Statement.parse (data, filename, stmt, diagnostics));
 			}
 			return ret;
 		}
@@ -212,7 +306,7 @@ namespace Meson {
 	}
 
 	class Statement : CodeNode {
-		internal static Statement parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static Statement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			if (tsn.type () != "statement" && tsn.type () != "comment") {
 				var js = new JumpStatement ();
 				js.sref = new SourceReference (filename, tsn);
@@ -222,17 +316,20 @@ namespace Meson {
 			var child = tsn.named_child (0);
 			switch (child.type ()) {
 			case "expression":
-				return Expression.parse (data, filename, child);
+				return Expression.parse (data, filename, child, diagnostics);
 			case "assignment_statement":
-				return AssignmentStatement.parse (data, filename, child);
+				return AssignmentStatement.parse (data, filename, child, diagnostics);
 			case "selection_statement":
-				return SelectionStatement.parse (data, filename, child);
+				return SelectionStatement.parse (data, filename, child, diagnostics);
 			case "iteration_statement":
-				return IterationStatement.parse (data, filename, child);
+				return IterationStatement.parse (data, filename, child, diagnostics);
 			case "comment":
 				break;
 			}
-			critical ("Unknown thing: %s", child.type ());
+            var diag = new Diagnostic();
+            diag.range = new SourceReference (filename, tsn).to_lsp_range();
+            diag.severity = DiagnosticSeverity.Error;
+            diag.message = "Unknown statement type: %s".printf (child.type ());
 			assert_not_reached ();
 		}
 	}
@@ -380,7 +477,7 @@ namespace Meson {
 			return null;
 		}
 
-		internal static new SelectionStatement parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new SelectionStatement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			var ret = new SelectionStatement ();
 			ret.sref = new SourceReference (filename, tsn);
 			var tmp = new Gee.ArrayList<Statement> ();
@@ -391,7 +488,7 @@ namespace Meson {
 						i++;
 					}
 					var condition = tsn.child (i + 1);
-					ret.conditions.add (Expression.parse (data, filename, condition.named_child (0)));
+					ret.conditions.add (Expression.parse (data, filename, condition.named_child (0), diagnostics));
 					i++;
 				} else if (Util.get_string_value (data, c).strip () == "else if") {
 					ret.blocks.add (tmp);
@@ -400,13 +497,13 @@ namespace Meson {
 					}
 					tmp = new Gee.ArrayList<Statement>();
 					var condition = tsn.child (i + 1);
-					ret.conditions.add (Expression.parse (data, filename, condition.named_child (0)));
+					ret.conditions.add (Expression.parse (data, filename, condition.named_child (0), diagnostics));
 					i++;
 				} else if (Util.get_string_value (data, c).strip () == "else") {
 					ret.blocks.add (tmp);
 					tmp = new Gee.ArrayList<Statement>();
 				} else if (c.type () == "statement" && (c.named_child_count () == 1 && c.named_child (0).type () != "comment")) {
-					tmp.add (Statement.parse (data, filename, c));
+					tmp.add (Statement.parse (data, filename, c, diagnostics));
 				}
 			}
 			ret.blocks.add (tmp);
@@ -526,15 +623,29 @@ namespace Meson {
 		}
 
 
-		internal static new IterationStatement parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new IterationStatement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			var ret = new IterationStatement ();
 			ret.sref = new SourceReference (filename, tsn);
 			var ids = tsn.named_child (0);
+			var s = new Gee.HashSet<string>();
 			for (var i = 0; i < ids.named_child_count (); i++) {
 				var x = ids.named_child (i);
-				ret.identifiers.add (Expression.parse (data, filename, x));
+				ret.identifiers.add (Expression.parse (data, filename, x, diagnostics));
+				if (!(ret.identifiers[i] is Identifier)) {
+                    diagnostics.add (new Diagnostic.error (
+                                            ret.identifiers[i].sref,
+                                            "Expected Identifier got %s".printf (ret.identifiers[i].get_type().name())));
+				} else {
+				    var name = ((Identifier)ret.identifiers[i]).name;
+				    if (s.contains (name)) {
+				        diagnostics.add (new Diagnostic.error (
+                                            ret.identifiers[i].sref,
+                                            "Duplicate variable in foreach: %s".printf (name)));
+				    }
+                    s.add (name);
+				}
 			}
-			ret.id = Expression.parse (data, filename, tsn.named_child (1));
+			ret.id = Expression.parse (data, filename, tsn.named_child (1), diagnostics);
 			for (var i = 2; i < tsn.named_child_count (); i++) {
 				if (tsn.named_child (i).type () == "comment")
 					continue;
@@ -543,7 +654,7 @@ namespace Meson {
 					continue;
 				if (stmt.named_child_count () == 1 && stmt.named_child (0).type () == "comment")
 					continue;
-				ret.statements.add (Statement.parse (data, filename, tsn.named_child (i)));
+				ret.statements.add (Statement.parse (data, filename, tsn.named_child (i), diagnostics));
 			}
 			return ret;
 		}
@@ -558,14 +669,61 @@ namespace Meson {
 			lhs.fill_diagnostics (env, diagnostics);
 			rhs.fill_diagnostics (env, diagnostics);
 			var types = rhs.deduce_types (env);
-			info ("Deduced in %s:", this.sref.to_string ());
-			if (lhs is Identifier)
-				env.register (((Identifier) lhs).name, this.lhs.sref, types);
-			foreach (var t in types)
-				info ("\t%s", t.to_string ());
+			if (lhs is Identifier){
+				if (this.op == AssignmentOperator.EQ) {
+					info ("Deduced in %s (%u):", this.sref.to_string (), types.size);
+					foreach (var t in types)
+						info ("\t%s", t.to_string ());
+					env.register (((Identifier) lhs).name, this.lhs.sref, types);
+				} else if (this.op == AssignmentOperator.PLUS_EQ) {
+                    var ret = new Gee.HashSet<MesonType>();
+                    var l = env.find_identifier (((Identifier) lhs).name);
+				    foreach (var ri in types) {
+					    foreach (var li in l) {
+						    if (li is MList) {
+							    var mlist = new MList(((MList)li).values.to_array ());
+							    mlist.values.add_all ((ri is MList) ? ((MList)ri).values : ListUtils.of (ri));
+							    ret.add (mlist);
+						    } else if (li is Dictionary && ri is Dictionary) {
+							    var dict = new Dictionary(((Dictionary)li).values.to_array ());
+							    dict.values.add_all ((ri is Dictionary) ? ((Dictionary)ri).values : ListUtils.of (ri));
+							    ret.add (dict);
+						    } else if (li is Elementary && ri is Elementary) {
+							    if (ri == li && li == Elementary.STR || li == Elementary.INT)
+								    ret.add (li);
+						    }
+					    }
+				    }
+				    env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
+				} else if (this.op == AssignmentOperator.SLASH_EQ) {
+                    var ret = new Gee.HashSet<MesonType>();
+                    var l = env.find_identifier (((Identifier) lhs).name);
+				    foreach (var ri in types) {
+					    foreach (var li in l) {
+						    if (li is Elementary && ri is Elementary) {
+							    if (ri == li && li == Elementary.STR || li == Elementary.INT)
+								    ret.add (li);
+						    }
+					    }
+				    }
+				    env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
+				} else {
+                    var ret = new Gee.HashSet<MesonType>();
+                    var l = env.find_identifier (((Identifier) lhs).name);
+				    foreach (var ri in types) {
+					    foreach (var li in l) {
+						    if (li is Elementary && ri is Elementary) {
+							    if (ri == li && li == Elementary.INT)
+								    ret.add (li);
+						    }
+					    }
+				    }
+				    env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
+				}
+			}
 			// list: =,+= is allowed
 			// dict: =,+= is allowed
-			// str: =
+			// str: +=
 			// int: all
 		}
 
@@ -628,12 +786,12 @@ namespace Meson {
 		}
 
 
-		internal static new AssignmentStatement parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new AssignmentStatement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "assignment_statement");
 			var ret = new AssignmentStatement ();
 			ret.sref = new SourceReference (filename, tsn);
-			ret.lhs = Expression.parse (data, filename, tsn.named_child (0));
-			ret.rhs = Expression.parse (data, filename, tsn.named_child (2));
+			ret.lhs = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
+			ret.rhs = Expression.parse (data, filename, tsn.named_child (2), diagnostics);
 			switch (Util.get_string_value (data, tsn.named_child (1))) {
 			case "=":
 				ret.op = AssignmentOperator.EQ;
@@ -654,6 +812,10 @@ namespace Meson {
 				ret.op = AssignmentOperator.MINUS_EQ;
 				break;
 			default:
+			    diagnostics.add (new Diagnostic.error (
+                    new SourceReference (filename, tsn.named_child (1)),
+                    "Expected assignment_operator, got %s".printf (tsn.named_child(1).type())
+			    ));
 				break;
 			}
 			return ret;
@@ -670,46 +832,49 @@ namespace Meson {
 	}
 
 	class Expression : Statement {
-		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			if (tsn.named_child_count () == 0) {
 				if (tsn.type () == "id_expression")
 					return new Identifier (Util.get_string_value (data, tsn), filename, tsn);
-				critical ("%s %s (%u %u)", filename, tsn.type (), tsn.start_point ().row, tsn.start_point ().column);
-				assert_not_reached ();
+				diagnostics.add (new Diagnostic.error (
+                    new SourceReference (filename, tsn),
+                    "Unexpected type: %s".printf (tsn.type ())
+				));
+				return new Identifier ("<<ERROR>>", filename, tsn);
 			}
 			switch (tsn.named_child (0).type ()) {
 			case "function_expression":
-				return FunctionExpression.parse (data, filename, tsn.named_child (0));
+				return FunctionExpression.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "conditional_expression":
-				return ConditionalExpression.parse (data, filename, tsn.named_child (0));
+				return ConditionalExpression.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "unary_expression":
-				return UnaryExpression.parse (data, filename, tsn.named_child (0));
+				return UnaryExpression.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "subscript_expression":
-				return ArrayAccessExpression.parse (data, filename, tsn.named_child (0));
+				return ArrayAccessExpression.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "method_expression":
-				return MethodExpression.parse (data, filename, tsn.named_child (0));
+				return MethodExpression.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "binary_expression":
-				return BinaryExpresssion.parse (data, filename, tsn.named_child (0));
+				return BinaryExpresssion.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "integer_literal":
-				return IntegerLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+				return IntegerLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0), diagnostics);
 			case "string_literal":
-				return StringLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+				return StringLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0), diagnostics);
 			case "boolean_literal":
-				return BooleanLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
+				return BooleanLiteral.parse (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0), diagnostics);
 			case "array_literal":
-				return ArrayLiteral.parse (data, filename, tsn.named_child (0));
+				return ArrayLiteral.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "dictionary_literal":
-				return DictionaryLiteral.parse (data, filename, tsn.named_child (0));
+				return DictionaryLiteral.parse (data, filename, tsn.named_child (0), diagnostics);
 			case "id_expression":
 			case "function_id":
 				return new Identifier (Util.get_string_value (data, tsn.named_child (0)), filename, tsn.named_child (0));
 			case "primary_expression":
 				if (tsn.named_child (0).child_count () == 1)
 					return new Identifier (Util.get_string_value (data, tsn.named_child (0).named_child (0)), filename, tsn.named_child (0).named_child (0));
-				return Expression.parse (data, filename, tsn.named_child (0).named_child (0));
+				return Expression.parse (data, filename, tsn.named_child (0).named_child (0), diagnostics);
 			default:
-				critical ("Unexpected: %s [%s; %u %u]", tsn.named_child (0).type (), tsn.named_child (0).to_string (), tsn.named_child (0).start_point ().row, tsn.named_child (0).start_point ().column);
-				assert_not_reached ();
+			    diagnostics.add (new Diagnostic.error (new SourceReference (filename, tsn.named_child (0)), "Unexpected child: %s".printf (tsn.named_child (0).type ())));
+			    return new Identifier ("<<ERROR>>", filename, tsn);
 			}
 		}
 
@@ -794,14 +959,14 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal static new DictionaryLiteral parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new DictionaryLiteral parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "dictionary_literal");
 			var ret = new DictionaryLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
 				var kv = tsn.named_child (i);
-				ret.keys.add (Expression.parse (data, filename, kv.named_child (0)));
-				ret.values.add (Expression.parse (data, filename, kv.named_child (1)));
+				ret.keys.add (Expression.parse (data, filename, kv.named_child (0), diagnostics));
+				ret.values.add (Expression.parse (data, filename, kv.named_child (1), diagnostics));
 			}
 			return ret;
 		}
@@ -843,14 +1008,14 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal static new ArrayLiteral parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new ArrayLiteral parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "array_literal");
 			var ret = new ArrayLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
 				if (tsn.named_child (i).type () != "expression")
 					continue;
-				ret.elements.add (Expression.parse (data, filename, tsn.named_child (i)));
+				ret.elements.add (Expression.parse (data, filename, tsn.named_child (i), diagnostics));
 			}
 			return ret;
 		}
@@ -872,7 +1037,7 @@ namespace Meson {
 				into.add (symbol);
 		}
 
-		internal static new IntegerLiteral parse (string str, string filename, TreeSitter.TSNode tsn) {
+		internal static new IntegerLiteral parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "integer_literal");
 			var ret = new IntegerLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
@@ -904,7 +1069,7 @@ namespace Meson {
 				into.add (symbol);
 		}
 
-		internal static new BooleanLiteral parse (string str, string filename, TreeSitter.TSNode tsn) {
+		internal static new BooleanLiteral parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "boolean_literal");
 			var ret = new BooleanLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
@@ -929,7 +1094,7 @@ namespace Meson {
 				into.add (symbol);
 		}
 
-		internal static new StringLiteral parse (string str, string filename, TreeSitter.TSNode tsn) {
+		internal static new StringLiteral parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "string_literal");
 			var ret = new StringLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
@@ -990,6 +1155,77 @@ namespace Meson {
 					if (m != null) {
 						ret.add_all (m.return_type);
 					}
+				} else if (t is Elementary) {
+					var e = (Elementary)t;
+					if (e == Elementary.STR) {
+						switch (this.name) {
+							case "contains":
+							case "endswith":
+							case "startswith":
+							case "version_compare":
+								ret.add (Elementary.BOOL);
+								break;
+							case "format":
+							case "join":
+							case "replace":
+							case "strip":
+							case "substring":
+							case "to_lower":
+							case "to_upper":
+							case "underscorify":
+								ret.add (Elementary.STR);
+								break;
+							case "split":
+								ret.add (new MList (new MesonType[]{Elementary.STR}));
+								break;
+							case "to_int":
+								ret.add (Elementary.INT);
+								break;
+						}
+					} else if (e == Elementary.INT) {
+						switch (this.name) {
+							case "is_even":
+							case "is_odd":
+								ret.add (Elementary.BOOL);
+								break;
+							case "to_string":
+								ret.add (Elementary.STR);
+								break;
+						}
+					} else if (e == Elementary.BOOL) {
+						switch (this.name) {
+							case "to_int":
+								ret.add (Elementary.INT);
+								break;
+							case "to_string":
+								ret.add (Elementary.STR);
+								break;
+						}
+					}
+				} else if (t is MList) {
+					switch (this.name) {
+						case "contains":
+							ret.add (Elementary.BOOL);
+							break;
+						case "get":
+							ret.add (Elementary.ANY);
+							break;
+						case "length":
+							ret.add (Elementary.INT);
+							break;
+					}
+				} else if (t is Dictionary) {
+					switch (this.name) {
+						case "get":
+							ret.add (Elementary.ANY);
+							break;
+						case "has_key":
+							ret.add (Elementary.BOOL);
+							break;
+						case "keys":
+							ret.add (new MList (new MesonType[]{Elementary.STR}));
+							break;
+					}
 				}
 			}
 			if (!ret.is_empty)
@@ -1024,15 +1260,15 @@ namespace Meson {
 				return s;
 			return this.list == null ? null : this.list.find_identifier (file, pos);
 		}
-		internal static new MethodExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new MethodExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "method_expression");
 			var ret = new MethodExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.name_ref = new SourceReference (filename, tsn.named_child (1));
-			ret.obj = Expression.parse (data, filename, tsn.named_child (0));
+			ret.obj = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
 			ret.name = Util.get_string_value (data, tsn.named_child (1));
 			if (tsn.named_child_count () == 3)
-				ret.list = ArgumentList.parse (data, filename, tsn.named_child (2));
+				ret.list = ArgumentList.parse (data, filename, tsn.named_child (2), diagnostics);
 			return ret;
 		}
 	}
@@ -1079,13 +1315,13 @@ namespace Meson {
 			return this.if_false.find_identifier (file, pos);
 		}
 
-		internal static new ConditionalExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new ConditionalExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "conditional_expression");
 			var ret = new ConditionalExpression ();
 			ret.sref = new SourceReference (filename, tsn);
-			ret.condition = Expression.parse (data, filename, tsn.named_child (0));
-			ret.if_true = Expression.parse (data, filename, tsn.named_child (1));
-			ret.if_false = Expression.parse (data, filename, tsn.named_child (2));
+			ret.condition = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
+			ret.if_true = Expression.parse (data, filename, tsn.named_child (1), diagnostics);
+			ret.if_false = Expression.parse (data, filename, tsn.named_child (2), diagnostics);
 			return ret;
 		}
 	}
@@ -1116,6 +1352,7 @@ namespace Meson {
 				s.add_all (r.return_type);
 				return s;
 			}
+			info ("%s not found", this.name);
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 		}
 
@@ -1172,14 +1409,14 @@ namespace Meson {
 			return this.arg_list == null ? null : this.arg_list.find_identifier (file, pos);
 		}
 
-		internal static new FunctionExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new FunctionExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "function_expression");
 			var ret = new FunctionExpression ();
 			ret.name_ref = new SourceReference (filename, tsn.named_child (0));
 			ret.sref = new SourceReference (filename, tsn);
 			ret.name = Util.get_string_value (data, tsn.named_child (0));
 			if (tsn.named_child_count () == 2) {
-				ret.arg_list = ArgumentList.parse (data, filename, tsn.named_child (1));
+				ret.arg_list = ArgumentList.parse (data, filename, tsn.named_child (1), diagnostics);
 			}
 			return ret;
 		}
@@ -1205,16 +1442,16 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal static new ArgumentList parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new ArgumentList parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "argument_list");
 			var ret = new ArgumentList ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
 				var c = tsn.named_child (i);
 				if (c.type () == "expression") {
-					ret.args.add (Expression.parse (data, filename, c));
+					ret.args.add (Expression.parse (data, filename, c, diagnostics));
 				} else {
-					ret.args.add (KeywordArgument.parse (data, filename, c));
+					ret.args.add (KeywordArgument.parse (data, filename, c, diagnostics));
 				}
 			}
 			return ret;
@@ -1245,13 +1482,13 @@ namespace Meson {
 			return this.inner.find_identifier (file, pos);
 		}
 
-		internal static new KeywordArgument parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new KeywordArgument parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "keyword_item");
 			var ret = new KeywordArgument ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.key_ref = new SourceReference (filename, tsn.named_child (0));
 			ret.name = Util.get_string_value (data, tsn.named_child (0));
-			ret.inner = Expression.parse (data, filename, tsn.named_child (1));
+			ret.inner = Expression.parse (data, filename, tsn.named_child (1), diagnostics);
 			return ret;
 		}
 	}
@@ -1275,14 +1512,47 @@ namespace Meson {
 			case BinaryOperator.OR:
 			case BinaryOperator.AND:
 				return ListUtils.of (Elementary.BOOL);
-			case BinaryOperator.SLASH:
 			case BinaryOperator.PLUS:
-				if (ListUtils.contains_elementary (r, ElementaryType.STR)
-					&& ListUtils.contains_elementary (l, ElementaryType.STR))
-					return ListUtils.of (Elementary.STR);
-				else if (ListUtils.contains_elementary (r, ElementaryType.INT)
-						 && ListUtils.contains_elementary (l, ElementaryType.INT))
-					return ListUtils.of (Elementary.INT);
+				var ret = new Gee.HashSet<MesonType>();
+				foreach (var ri in r) {
+					foreach (var li in l) {
+						if (li is MList) {
+							var mlist = new MList(((MList)li).values.to_array ());
+							mlist.values.add_all ((ri is MList) ? ((MList)ri).values : ListUtils.of (ri));
+							ret.add (mlist);
+						} else if (li is Dictionary && ri is Dictionary) {
+							var dict = new Dictionary(((Dictionary)li).values.to_array ());
+							dict.values.add_all ((ri is Dictionary) ? ((Dictionary)ri).values : ListUtils.of (ri));
+							ret.add (dict);
+						} else if (li is Elementary && ri is Elementary) {
+							if (ri == li && li == Elementary.STR || li == Elementary.INT)
+								ret.add (li);
+						}
+					}
+				}
+				if (!ret.is_empty)
+					return ret;
+				break;
+			case BinaryOperator.SLASH:
+				foreach (var ri in r) {
+					foreach (var li in l) {
+						if (ri == li)
+							if (ri == Elementary.STR)
+								return ListUtils.of (Elementary.STR);
+							else if (ri == Elementary.INT)
+								return ListUtils.of (Elementary.INT);
+					}
+				}
+				break;
+			case BinaryOperator.STAR:
+			case BinaryOperator.MOD:
+			case BinaryOperator.MINUS:
+				foreach (var ri in r) {
+					foreach (var li in l) {
+						if (ri == li && ri == Elementary.INT)
+							return ListUtils.of (Elementary.INT);
+					}
+				}
 				break;
 			}
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
@@ -1309,13 +1579,12 @@ namespace Meson {
 			return this.lhs.find_identifier (file, pos);
 		}
 
-		internal static new BinaryExpresssion parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new BinaryExpresssion parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "binary_expression");
 			var ret = new BinaryExpresssion ();
 			ret.sref = new SourceReference (filename, tsn);
-			ret.lhs = Expression.parse (data, filename, tsn.named_child (0));
+			ret.lhs = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
 			var op = tsn.named_child_count () == 2 ? tsn.child (1) : tsn.named_child (1);
-			info ("%s %s", ret.sref.to_string (), Util.get_string_value (data, op));
 			switch (Util.get_string_value (data, op).strip ()) {
 			case "+":
 				ret.op = BinaryOperator.PLUS;
@@ -1363,9 +1632,14 @@ namespace Meson {
 				ret.op = BinaryOperator.AND;
 				break;
 			default:
-				assert_not_reached ();
+			    ret.op = BinaryOperator.PLUS;
+			    diagnostics.add (new Diagnostic.error (
+			        new SourceReference (filename, op),
+			        "Unexpected binary operator: %s".printf (Util.get_string_value (data, op).strip ())
+			    ));
+			    break;
 			}
-			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count () == 2 ? 1 : 2));
+			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count () == 2 ? 1 : 2), diagnostics);
 			return ret;
 		}
 	}
@@ -1389,11 +1663,11 @@ namespace Meson {
 			return this.rhs.find_identifier (file, pos);
 		}
 
-		internal static new UnaryExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new UnaryExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "unary_expression");
 			var ret = new UnaryExpression ();
 			ret.sref = new SourceReference (filename, tsn);
-			ret.rhs = Expression.parse (data, filename, tsn.named_child (0));
+			ret.rhs = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
 			switch (Util.get_string_value (data, tsn.child (0)).strip ()) {
 			case "not":
 				ret.op = UnaryOperator.NOT;
@@ -1404,6 +1678,13 @@ namespace Meson {
 			case "-":
 				ret.op = UnaryOperator.MINUS;
 				break;
+			default:
+			    ret.op = UnaryOperator.NOT;
+			    diagnostics.add (new Diagnostic.error (
+			        new SourceReference (filename, tsn.child (0)),
+			        "Unexpected unary operator: %s".printf (Util.get_string_value (data, tsn.child (0)).strip ())
+			    ));
+			    break;
 			}
 			return ret;
 		}
@@ -1419,11 +1700,15 @@ namespace Meson {
 		internal Expression outer;
 
 		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
-			var types = inner.deduce_types (env);
-			if (!(types.to_array ()[0] is MList))
-				return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+			var types = outer.deduce_types (env);
 			var s = new Gee.HashSet<MesonType>();
-			s.add_all (((MList) types.to_array ()[0]).values);
+			foreach (var t in types) {
+				if (t is MList) {
+					s.add_all (((MList)t).values);
+				}
+			}
+			if (s.is_empty)
+				return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 			return s;
 		}
 
@@ -1448,12 +1733,12 @@ namespace Meson {
 			return this.inner.find_identifier (file, pos);
 		}
 
-		internal static new ArrayAccessExpression parse (string data, string filename, TreeSitter.TSNode tsn) {
+		internal static new ArrayAccessExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "subscript_expression");
 			var ret = new ArrayAccessExpression ();
 			ret.sref = new SourceReference (filename, tsn);
-			ret.outer = Expression.parse (data, filename, tsn.named_child (0));
-			ret.inner = Expression.parse (data, filename, tsn.named_child (1));
+			ret.outer = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
+			ret.inner = Expression.parse (data, filename, tsn.named_child (1), diagnostics);
 			return ret;
 		}
 	}

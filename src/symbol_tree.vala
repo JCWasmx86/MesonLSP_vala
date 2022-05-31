@@ -99,7 +99,7 @@ namespace Meson {
 			return this.file;
 		}
 
-		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches = new Gee.HashMap<string, string>()) {
+		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches = new Gee.HashMap<string, string>(), Gee.Set<Diagnostic> diagnostics) {
 			var ret = new SymbolTree ();
 			ret.patches = patches;
 			var file = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), "meson.build");
@@ -120,7 +120,7 @@ namespace Meson {
 				FileUtils.get_contents (file.get_path (), out data, out data_length);
 			var tree = ps.parse_string (null, data + "\n", (uint32) data_length + 1);
 			var root = tree.root_node ();
-			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root);
+			ret.file = SourceFile.build_ast (data + "\n", file.get_path (), root, diagnostics);
 			assert (ret.file != null);
 			if (root.named_child_count () == 0) {
 				tree.free ();
@@ -137,13 +137,13 @@ namespace Meson {
 				var stmt = build_def.named_child (i);
 				if (stmt.type () != "statement")
 					continue;
-				analyze_statement (stmt, ret, uri, file, data, patches);
+				analyze_statement (stmt, ret, uri, file, data, patches, diagnostics);
 			}
 			tree.free ();
 			return ret;
 		}
 
-		static void analyze_statement (TreeSitter.TSNode stmt, SymbolTree ret, Uri uri, File file, string data, Gee.Map<string, string> patches) {
+		static void analyze_statement (TreeSitter.TSNode stmt, SymbolTree ret, Uri uri, File file, string data, Gee.Map<string, string> patches, Gee.Set<Diagnostic> diagnostics) {
 			for (var j = 0; j < stmt.named_child_count (); j++) {
 				var s = stmt.named_child (j);
 				if (s.named_child_count () == 0)
@@ -160,7 +160,7 @@ namespace Meson {
 							sd.name = str;
 							ret.datas.add (sd);
 							var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
-							var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches);
+							var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches, diagnostics);
 							assert (st.file != null);
 							ret.datas.add (st);
 							ret.child_files.add (File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str + "/meson.build").get_path ());
@@ -180,13 +180,13 @@ namespace Meson {
 					for (var i = 3; i < s.named_child_count (); i++) {
 						if (s.named_child (i).type () != "statement")
 							continue;
-						analyze_statement (s.named_child (i), ret, uri, file, data, patches);
+						analyze_statement (s.named_child (i), ret, uri, file, data, patches, diagnostics);
 					}
 				} else if (s.type () == "selection_statement") {
 					for (var i = 0; i < s.named_child_count (); i++) {
 						if (s.named_child (i).type () != "statement")
 							continue;
-						analyze_statement (s.named_child (i), ret, uri, file, data, patches);
+						analyze_statement (s.named_child (i), ret, uri, file, data, patches, diagnostics);
 					}
 				}
 			}

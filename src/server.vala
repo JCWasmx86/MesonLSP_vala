@@ -19,7 +19,7 @@
  */
 namespace Meson {
 	public class MesonLsp : Jsonrpc.Server {
-		Uri base_uri;
+		Uri? base_uri;
 		SymbolTree? tree;
 		TypeRegistry tr;
 		MainLoop loop;
@@ -91,7 +91,7 @@ namespace Meson {
 			client.reply (id, Util.object_to_variant (h));
 		}
 
-		void did_change (Jsonrpc.Client client, Variant @params) {
+		void did_change (Jsonrpc.Client client, Variant @params) throws Error {
 			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
 			var changes = @params.lookup_value ("contentChanges", VariantType.ARRAY);
 			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
@@ -109,10 +109,12 @@ namespace Meson {
 			patches.set_all (this.tree.patches);
 			// Override other changes
 			patches[uri] = ce.text + "\n\n\n";
+            warning ("%s", this.base_uri.to_string ());
+            warning ("%s", uri);
 			this.load_tree (client, this.base_uri, patches);
 		}
 
-		void did_save (Jsonrpc.Client client, Variant @params) {
+		void did_save (Jsonrpc.Client client, Variant @params) throws Error {
 			var document = @params.lookup_value ("textDocument", VariantType.VARDICT);
 			var uri = (string) document.lookup_value ("uri", VariantType.STRING);
 			var patches = new Gee.HashMap<string, string>();
@@ -124,6 +126,7 @@ namespace Meson {
 		void initialize (Jsonrpc.Client client, Variant id, Variant @params) throws Error {
 			var init = Util.parse_variant<InitializeParams> (@params);
 			this.base_uri = Uri.parse (init.rootUri, UriFlags.NONE);
+			info ("URI: %s", this.base_uri.to_string ());
 			this.load_tree (client, this.base_uri);
 			client.reply (id, build_dict (
 							  capabilities: build_dict (
@@ -228,8 +231,8 @@ namespace Meson {
 			client.reply (id, ret);
 		}
 
-		internal void load_tree (Jsonrpc.Client client, Uri dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>()) throws GLib.Error {
-			if (this.tree != null && this.tree.child_files != null) {
+		internal void load_tree (Jsonrpc.Client client, Uri? dir, Gee.HashMap<string, string> patches = new Gee.HashMap<string, string>()) {
+            if (this.tree != null && this.tree.child_files != null) {
 				foreach (var file in this.tree.child_files) {
 					var uri = Uri.parse (File.new_for_path (file).get_uri (), UriFlags.NONE);
 					var diags = new Variant.array (VariantType.VARIANT, new Variant[] {});
@@ -246,108 +249,83 @@ namespace Meson {
 			}
 			this.options.clear ();
 			var start = GLib.get_real_time () / 1000.0;
-			this.tree = SymbolTree.build (dir, patches);
+			var vvv = new Gee.HashSet<Diagnostic>();
+			this.tree = SymbolTree.build (dir, patches, vvv);
 			this.ast = this.tree.merge ();
 			var end = GLib.get_real_time () / 1000.0;
 			info ("Built tree in %lfms", (end - start));
 			var diagnostics = new Gee.ArrayList<Diagnostic>();
-			var env = new MesonEnv (this.tr);
-			var hash_map = new Gee.HashMap<string, Gee.List<Diagnostic> >();
-			foreach (var diagnostic in diagnostics) {
-				var file = diagnostic.file;
-				if (hash_map.has_key (file)) {
-					hash_map[file].add (diagnostic);
-				} else {
-					hash_map.set (file, new Gee.ArrayList<Diagnostic>());
-					hash_map[file].add (diagnostic);
-				}
-			}
-			foreach (var entry in hash_map) {
-				var key = entry.key;
-				var v = entry.value;
-				var uri = Uri.parse (key, UriFlags.NONE).to_string ();
-				info ("Publishing %u diagnostics for %s", v.size, uri);
-				var arr = new Json.Array ();
-				foreach (var d in v) {
-					arr.add_element (Json.gobject_serialize (d));
-				}
-				client.send_notification (
-					"textDocument/publishDiagnostics",
-					build_dict (
-						uri: new Variant.string (uri),
-						diagnostics: Json.gvariant_deserialize (new Json.Node.alloc ().init_array (arr), null)
-				));
-			}
-			this.ast.fill_diagnostics (env, diagnostics);
+			diagnostics.add_all (vvv);
 			var file = this.base_uri.get_path () + "/meson_options.txt";
 			var f = File.new_for_path (file);
-			if (!f.query_exists ())
-				return;
-			var parser = new TreeSitter.TSParser ();
-			parser.set_language (TreeSitter.tree_sitter_meson ());
-			var data = "";
-			size_t data_len = 0;
-			FileUtils.get_contents (file, out data, out data_len);
-			data += "\n\n";
-			data_len += 2;
-			var tree = parser.parse_string (null, data, (uint32) data_len);
-			if (tree == null)
-				return;
-			var root = tree.root_node ();
-			var build_def = root.named_child (0);
-			if (build_def.type () != "build_definition") {
-				tree.free ();
-				return;
-			}
-			for (var i = 0; i < build_def.named_child_count (); i++) {
-				var stmt = build_def.named_child (i);
-				if (stmt.type () != "statement" || stmt.named_child_count () == 0)
-					continue;
-				var expr = stmt.named_child (0);
-				if (expr.type () != "expression" || expr.named_child_count () == 0)
-					continue;
-				var fe = expr.named_child (0);
-				if (fe.type () != "function_expression" || fe.named_child_count () == 0)
-					continue;
-				var function_id = fe.named_child (0);
-				var f_name = Util.get_string_value (data, function_id);
-				if (f_name != "option")
-					continue;
-				var arg_list = fe.named_child (1);
-				string option_name = null;
-				string description = null;
-				string type = null;
-				for (var j = 0; j < arg_list.child_count (); j++) {
-					var arg = arg_list.child (j);
-					if (arg.type () == "expression") {
-						var sl = arg.named_child (0);
-						if (sl.type () != "string_literal")
-							continue;
-						option_name = Util.get_string_value (data, sl);
-						// Remove "'"
-						while (option_name.has_prefix ("'"))
-							option_name = option_name.substring (1, option_name.length - 2);
-					} else if (arg.type () == "keyword_item") {
-						var key = arg.named_child (0);
-						var n = Util.get_string_value (data, key);
-						if (n != "type" && n != "description")
-							continue;
-						var val = Util.get_string_value (data, arg.named_child (1));
-						while (val.has_prefix ("'"))
-							val = val.substring (1, val.length - 2);
-						if (n == "type")
-							type = val;
-						else
-							description = val;
-					}
-				}
-				if (option_name == null || type == null)
-					continue;
-				info ("Found option %s of type %s", option_name, type);
-				var option = new MesonOption ();
-				option.type = type;
-				option.description = description;
-				this.options.set (option_name, option);
+			if (f.query_exists ()) {
+			    var parser = new TreeSitter.TSParser ();
+			    parser.set_language (TreeSitter.tree_sitter_meson ());
+			    var data = "";
+			    size_t data_len = 0;
+			    FileUtils.get_contents (file, out data, out data_len);
+			    data += "\n\n";
+			    data_len += 2;
+			    var tree = parser.parse_string (null, data, (uint32) data_len);
+			    if (tree == null)
+				    return;
+			    var root = tree.root_node ();
+			    var build_def = root.named_child (0);
+			    if (build_def.type () != "build_definition") {
+				    tree.free ();
+				    return;
+			    }
+			    for (var i = 0; i < build_def.named_child_count (); i++) {
+				    var stmt = build_def.named_child (i);
+				    if (stmt.type () != "statement" || stmt.named_child_count () == 0)
+					    continue;
+				    var expr = stmt.named_child (0);
+				    if (expr.type () != "expression" || expr.named_child_count () == 0)
+					    continue;
+				    var fe = expr.named_child (0);
+				    if (fe.type () != "function_expression" || fe.named_child_count () == 0)
+					    continue;
+				    var function_id = fe.named_child (0);
+				    var f_name = Util.get_string_value (data, function_id);
+				    if (f_name != "option")
+					    continue;
+				    var arg_list = fe.named_child (1);
+				    string option_name = null;
+				    string description = null;
+				    string type = null;
+				    for (var j = 0; j < arg_list.child_count (); j++) {
+					    var arg = arg_list.child (j);
+					    if (arg.type () == "expression") {
+						    var sl = arg.named_child (0);
+						    if (sl.type () != "string_literal")
+							    continue;
+						    option_name = Util.get_string_value (data, sl);
+						    // Remove "'"
+						    while (option_name.has_prefix ("'"))
+							    option_name = option_name.substring (1, option_name.length - 2);
+					    } else if (arg.type () == "keyword_item") {
+						    var key = arg.named_child (0);
+						    var n = Util.get_string_value (data, key);
+						    if (n != "type" && n != "description")
+							    continue;
+						    var val = Util.get_string_value (data, arg.named_child (1));
+						    while (val.has_prefix ("'"))
+							    val = val.substring (1, val.length - 2);
+						    if (n == "type")
+							    type = val;
+						    else
+							    description = val;
+					    }
+				    }
+				    if (option_name == null || type == null)
+					    continue;
+				    info ("Found option %s of type %s", option_name, type);
+				    var option = new MesonOption ();
+				    option.type = type;
+				    option.description = description;
+				    this.options.set (option_name, option);
+			    }
+			    tree.free ();
 			}
 			this.register_option ("prefix", "string", "Installation prefix");
 			this.register_option ("bindir", "string", "Executable directory");
@@ -416,7 +394,36 @@ namespace Meson {
 			this.register_option ("python.install_env", "combo", "Which python environment to install to");
 			this.register_option ("python.platlibdir", "string", "Directory for site-specific, platform-specific files");
 			this.register_option ("python.purelibdir", "string", "Directory for site-specific, non-platform-specific files");
-			tree.free ();
+			var env = new MesonEnv (this.tr, this.options);
+			var hash_map = new Gee.HashMap<string, Gee.List<Diagnostic> >();
+			this.ast.fill_diagnostics (env, diagnostics);
+			info ("DIAG: %u", diagnostics.size);
+			foreach (var diagnostic in diagnostics) {
+				file = diagnostic.file;
+				info ("%s", diagnostic.message);
+				if (hash_map.has_key (file)) {
+					hash_map[file].add (diagnostic);
+				} else {
+					hash_map.set (file, new Gee.ArrayList<Diagnostic>());
+					hash_map[file].add (diagnostic);
+				}
+			}
+			foreach (var entry in hash_map) {
+				var key = entry.key;
+				var v = entry.value;
+				var uri = Uri.parse (key.has_prefix ("file://") ? key: ("file://" + key), UriFlags.NONE).to_string ();
+				info ("Publishing %u diagnostics for %s", v.size, uri);
+				var arr = new Json.Array ();
+				foreach (var d in v) {
+					arr.add_element (Json.gobject_serialize (d));
+				}
+				client.send_notification (
+					"textDocument/publishDiagnostics",
+					build_dict (
+						uri: new Variant.string (uri),
+						diagnostics: Json.gvariant_deserialize (new Json.Node.alloc ().init_array (arr), null)
+				));
+			}
 		}
 
 		void register_option (string name, string type, string description) {

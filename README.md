@@ -32,14 +32,14 @@ You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin
 - Hovering over options gives a description of it
 
 ## Status
-### Parsing works for all meson files
+### Parsing works for all meson files:
 - GNOME-Builder
 - gtk
 - mesa
 - glib
 - systemd
 
-## Issues
+## Issues:
 - Parsing big projects (E.g. mesa) leads to stuttering
 - After some time it disconnects from GNOME-Builder (Or the other way round)
 

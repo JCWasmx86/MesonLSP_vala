@@ -257,7 +257,7 @@ namespace Meson {
 	}
 
 	internal class Dictionary : MesonType {
-		internal Gee.Set<MesonType> values { get; set; default = new Gee.HashSet<MesonType>(); }
+		internal Gee.Set<MesonType> values { get; set; default = new Gee.TreeSet<MesonType> (compare_types_func); }
 
 		internal override string to_string () {
 			return "dict[%s]".printf (this.values.fold<string> ((a, b) => a.to_string () + "|" + b.to_string (), "")).replace ("|]", "]");
@@ -269,7 +269,7 @@ namespace Meson {
 	}
 
 	internal class MList : MesonType {
-		internal Gee.Set<MesonType> values { get; set; default = new Gee.HashSet<MesonType>(); }
+		internal Gee.Set<MesonType> values { get; set; default = new Gee.TreeSet<MesonType> (compare_types_func); }
 		internal override string to_string () {
 			return "list[%s]".printf (this.values.fold<string> ((a, b) => a.to_string () + "|" + b.to_string (), "")).replace ("|]", "]");
 		}
