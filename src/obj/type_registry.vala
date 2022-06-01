@@ -27,6 +27,7 @@ namespace Meson {
 			this.types = new Gee.ArrayList<MesonType>();
 			this.functions = new Gee.ArrayList<Method>();
 			Meson.populate_typeregistry (this);
+			Meson.populate_typeregistry_modules (this);
 		}
 
 		internal void register_function (string name, Gee.List<Parameter> args, MesonType[] ret, bool variadic) {

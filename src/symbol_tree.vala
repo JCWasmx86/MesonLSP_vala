@@ -36,27 +36,6 @@ namespace Meson {
 			return ret;
 		}
 
-		internal Gee.List<Symbol>? get_symbols (File file) {
-			if (this.filename == file.get_path ()) {
-				var ret = new Gee.ArrayList<Symbol> ();
-				foreach (var data in this.datas) {
-					if (data is Symbol) {
-						var s = (Symbol) data;
-						ret.add (s);
-					}
-				}
-				return ret;
-			}
-			foreach (var data in this.datas) {
-				if (data is SymbolTree) {
-					var s = ((SymbolTree) data).get_symbols (file);
-					if (s != null)
-						return s;
-				}
-			}
-			return null;
-		}
-
 		void analyze_ast_stmt (Gee.List<Statement> to_insert, Statement stmt, ref int i) {
 			if (stmt is FunctionExpression && ((FunctionExpression) stmt).name == "subdir") {
 				var arg_list = ((FunctionExpression) stmt).arg_list;
@@ -201,23 +180,6 @@ namespace Meson {
 		// {line, column}
 		internal uint[] start;
 		internal uint[] end;
-
-		internal DocumentSymbol to_symbol () {
-			var ds = new DocumentSymbol ();
-			ds.name = this.name;
-			ds.kind = SymbolKind.Variable;
-			ds.range = new Range () {
-				start = new Position () {
-					line = start[0],
-					character = start[1]
-				},
-				end = new Position () {
-					line = end[0],
-					character = end[1]
-				}
-			};
-			return ds;
-		}
 	}
 
 	internal class Subdir : Data {

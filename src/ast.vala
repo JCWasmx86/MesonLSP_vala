@@ -39,43 +39,41 @@ namespace Meson {
 			p.sref = sref;
 			p.deduced_types.add_all (this.merge (deduces));
 			this.positions.add (p);
-			info ("Registering %s (%u)", name, deduces.size);
 		}
 
 		private Gee.Set<MesonType> merge (Gee.Set<MesonType> d, uint counter = 0) {
-             var a = new Gee.TreeSet<MesonType> (compare_types_func);
-             if (counter == 128) {
-                 info ("CRITICAL-DEPTH reached: %u Fix your build files! (Or meson_lsp could be wrong ^^)", counter);
-                 a.add_all (d);
-                 return a;
-             }
-             var list = new MList(new MesonType[]{});
-             var found_list = false;
-             var found_dict = false;
-             var dict = new Dictionary(new MesonType[]{});
-             foreach (var type in d) {
-                 if (type is MList) {
-                     list.values.add_all (((MList)type).values);
-                     found_list = ((MList)type).values.is_empty;
-                 } else if (type is Dictionary) {
-                     dict.values.add_all(((Dictionary)type).values);
-                     found_dict = ((Dictionary)type).values.is_empty;
-                 } else {
-                     a.add (type);
-                 }
-             }
-             var tmp_set = new Gee.TreeSet<MesonType> (compare_types_func);
-             if (!list.values.is_empty || found_list) {
-                tmp_set.add_all (list.values);
-                a.add (new MList (merge (tmp_set, counter + 1).to_array ()));
-             }
-             tmp_set = new Gee.TreeSet<MesonType> (compare_types_func);
-             if (!dict.values.is_empty || found_dict) {
-                tmp_set.add_all (dict.values);
-                a.add (new Dictionary (merge (tmp_set, counter + 1).to_array ()));
-             }
-             info ("Went from %u to %u entries", d.size, a.size);
-             return a;
+			var a = new Gee.TreeSet<MesonType> (compare_types_func);
+			if (counter == 128) {
+				info ("CRITICAL-DEPTH reached: %u Fix your build files! (Or meson_lsp could be wrong ^^)", counter);
+				a.add_all (d);
+				return a;
+			}
+			var list = new MList (new MesonType[] {});
+			var found_list = false;
+			var found_dict = false;
+			var dict = new Dictionary (new MesonType[] {});
+			foreach (var type in d) {
+				if (type is MList) {
+					list.values.add_all (((MList) type).values);
+					found_list = ((MList) type).values.is_empty;
+				} else if (type is Dictionary) {
+					dict.values.add_all (((Dictionary) type).values);
+					found_dict = ((Dictionary) type).values.is_empty;
+				} else {
+					a.add (type);
+				}
+			}
+			var tmp_set = new Gee.TreeSet<MesonType> (compare_types_func);
+			if (!list.values.is_empty || found_list) {
+				tmp_set.add_all (list.values);
+				a.add (new MList (merge (tmp_set, counter + 1).to_array ()));
+			}
+			tmp_set = new Gee.TreeSet<MesonType> (compare_types_func);
+			if (!dict.values.is_empty || found_dict) {
+				tmp_set.add_all (dict.values);
+				a.add (new Dictionary (merge (tmp_set, counter + 1).to_array ()));
+			}
+			return a;
 		}
 
 		internal Gee.Set<MesonType> find_identifier (string name) {
@@ -93,61 +91,62 @@ namespace Meson {
 		}
 
 		internal void add_types (string name, SourceReference? sref, Gee.Set<MesonType> deduces) {
-		    var old = this.find_identifier (name);
-		    var a = new Gee.TreeSet<MesonType> (compare_types_func);
-		    a.add_all (old);
-		    a.add_all (deduces);
-		    this.register (name, sref, a);
+			var old = this.find_identifier (name);
+			var a = new Gee.TreeSet<MesonType> (compare_types_func);
+			a.add_all (old);
+			a.add_all (deduces);
+			this.register (name, sref, a);
 		}
 
 		internal TypeRegistry registry;
 	}
 	static int compare_types_func (MesonType a, MesonType b) {
-	    if ((a is Elementary) && (b is Elementary)) {
-	        var a1 = ((Elementary)a).type;
-	        var b1 = ((Elementary)b).type;
-	        return (a1 == b1 ? 0 : (a1 < b1 ? -1 : 1));
-	    } else if ((a is MList) && (b is MList)) {
-	        var a1 = ((MList)a).values;
-	        var b1 = ((MList)b).values;
-	        if (a1.contains_all (b1) && b1.contains_all (a1))
-	            return 0;
-	        return a1.size < b1.size ? -1 : 1;
-	    } else if ((a is Dictionary) && (b is Dictionary)) {
-	        var a1 = ((Dictionary)a).values;
-	        var b1 = ((Dictionary)b).values;
-	        if (a1.contains_all (b1) && b1.contains_all (a1))
-	            return 0;
-	        return a1.size < b1.size ? -1 : 1;
-	    } else if (a is Dictionary) {
-	        if (b is Elementary)
-	            return 1;
-	        if (b is MList)
-	            return 1;
-	        if (b is ObjectType)
-	            return 1;
-	    } else if (a is MList) {
-            if (b is Elementary)
-                return -1;
-            if (b is Dictionary)
-                return -1;
-            if (b is ObjectType)
-                return -1;
-	    } else if (a is Elementary) {
-	        if (b is MList)
-	            return -1;
-	        if (b is Dictionary)
-	            return -1;
-	        if (b is ObjectType)
-	            return -1;
-	    }
-	    if (a is ObjectType && !(b is ObjectType)) {
-	        return -1;
-	    } else if (a is ObjectType && (b is ObjectType)) {
-	        return ((ObjectType)a).name.collate (((ObjectType)b).name);
-	    }
-	    error ("%s %s", a.get_type().name(), b.get_type ().name ());
+		if ((a is Elementary) && (b is Elementary)) {
+			var a1 = ((Elementary) a).type;
+			var b1 = ((Elementary) b).type;
+			return (a1 == b1 ? 0 : (a1 < b1 ? -1 : 1));
+		} else if ((a is MList) && (b is MList)) {
+			var a1 = ((MList) a).values;
+			var b1 = ((MList) b).values;
+			if (a1.contains_all (b1) && b1.contains_all (a1))
+				return 0;
+			return a1.size < b1.size ? -1 : 1;
+		} else if ((a is Dictionary) && (b is Dictionary)) {
+			var a1 = ((Dictionary) a).values;
+			var b1 = ((Dictionary) b).values;
+			if (a1.contains_all (b1) && b1.contains_all (a1))
+				return 0;
+			return a1.size < b1.size ? -1 : 1;
+		} else if (a is Dictionary) {
+			if (b is Elementary)
+				return 1;
+			if (b is MList)
+				return 1;
+			if (b is ObjectType)
+				return 1;
+		} else if (a is MList) {
+			if (b is Elementary)
+				return -1;
+			if (b is Dictionary)
+				return -1;
+			if (b is ObjectType)
+				return -1;
+		} else if (a is Elementary) {
+			if (b is MList)
+				return -1;
+			if (b is Dictionary)
+				return -1;
+			if (b is ObjectType)
+				return -1;
+		}
+		if (a is ObjectType && !(b is ObjectType)) {
+			return -1;
+		} else if (a is ObjectType && (b is ObjectType)) {
+			return ((ObjectType) a).name.collate (((ObjectType) b).name);
+		}
+		error ("%s %s", a.get_type ().name (), b.get_type ().name ());
 	}
+
 	class VariablePos {
 		internal string name;
 		internal SourceReference? sref;
@@ -326,10 +325,10 @@ namespace Meson {
 			case "comment":
 				break;
 			}
-            var diag = new Diagnostic();
-            diag.range = new SourceReference (filename, tsn).to_lsp_range();
-            diag.severity = DiagnosticSeverity.Error;
-            diag.message = "Unknown statement type: %s".printf (child.type ());
+			var diag = new Diagnostic ();
+			diag.range = new SourceReference (filename, tsn).to_lsp_range ();
+			diag.severity = DiagnosticSeverity.Error;
+			diag.message = "Unknown statement type: %s".printf (child.type ());
 			assert_not_reached ();
 		}
 	}
@@ -367,29 +366,25 @@ namespace Meson {
 
 		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			foreach (var expr in this.conditions) {
-				expr.fill_diagnostics (env, diagnostics);
 				var types = expr.deduce_types (env);
-				if (types.size > 0) {
-					var type = types.to_array ()[0];
-					if (!(type is ElementaryType)) {
-						var t = ((Elementary) type).type;
-						if (t != ElementaryType.BOOL && t != ElementaryType.NOT_DEDUCEABLE) {
-							diagnostics.add (
-								new Diagnostic.error (
-									expr.sref,
-									"Condition is not boolean"
-								)
-							);
-						}
-					} else {
-						diagnostics.add (
-							new Diagnostic.error (
-								expr.sref,
-								"Condition is not boolean"
-							)
-						);
+				expr.fill_diagnostics (env, diagnostics);
+				var found_bool = false;
+				foreach (var t in types) {
+					if (t is Elementary && ((Elementary) t) == Elementary.BOOL) {
+						found_bool = true;
+						break;
 					}
 				}
+				info ("%s", found_bool.to_string ());
+				if (found_bool)
+					continue;
+				if (!found_bool)
+					diagnostics.add (
+						new Diagnostic.error (
+							expr.sref,
+							"Condition is not bool"
+						)
+					);
 			}
 			foreach (var block in this.blocks) {
 				foreach (var stmt in block) {
@@ -520,28 +515,18 @@ namespace Meson {
 		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			this.id.fill_diagnostics (env, diagnostics);
 			var types = this.id.deduce_types (env);
-			if (types.size > 0) {
-				var type = types.to_array ()[0];
-				if (!(type is MList || type is Dictionary)) {
-					diagnostics.add (
-						new Diagnostic.error (
-							id.sref,
-							"%s is not iterable".printf (type.to_string ())
-						)
-					);
-				}
+			var found_iterable = false;
+			foreach (var t in types) {
+				if (t is MList || t is Dictionary)
+					found_iterable = true;
 			}
-			foreach (var id in this.identifiers) {
-				if (!(id is Identifier)) {
-					diagnostics.add (
-						new Diagnostic.error (
-							id.sref,
-							"Expected identifier"
-						)
-					);
-				}
-				id.fill_diagnostics (env, diagnostics);
-			}
+			if (!found_iterable)
+				diagnostics.add (
+					new Diagnostic.error (
+						id.sref,
+						"Not iterable!"
+					)
+				);
 		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
@@ -632,17 +617,17 @@ namespace Meson {
 				var x = ids.named_child (i);
 				ret.identifiers.add (Expression.parse (data, filename, x, diagnostics));
 				if (!(ret.identifiers[i] is Identifier)) {
-                    diagnostics.add (new Diagnostic.error (
-                                            ret.identifiers[i].sref,
-                                            "Expected Identifier got %s".printf (ret.identifiers[i].get_type().name())));
+					diagnostics.add (new Diagnostic.error (
+										 ret.identifiers[i].sref,
+										 "Expected Identifier got %s".printf (ret.identifiers[i].get_type ().name ())));
 				} else {
-				    var name = ((Identifier)ret.identifiers[i]).name;
-				    if (s.contains (name)) {
-				        diagnostics.add (new Diagnostic.error (
-                                            ret.identifiers[i].sref,
-                                            "Duplicate variable in foreach: %s".printf (name)));
-				    }
-                    s.add (name);
+					var name = ((Identifier) ret.identifiers[i]).name;
+					if (s.contains (name)) {
+						diagnostics.add (new Diagnostic.error (
+											 ret.identifiers[i].sref,
+											 "Duplicate variable in foreach: %s".printf (name)));
+					}
+					s.add (name);
 				}
 			}
 			ret.id = Expression.parse (data, filename, tsn.named_child (1), diagnostics);
@@ -669,62 +654,58 @@ namespace Meson {
 			lhs.fill_diagnostics (env, diagnostics);
 			rhs.fill_diagnostics (env, diagnostics);
 			var types = rhs.deduce_types (env);
-			if (lhs is Identifier){
+			if (lhs is Identifier) {
 				if (this.op == AssignmentOperator.EQ) {
 					info ("Deduced in %s (%u):", this.sref.to_string (), types.size);
 					foreach (var t in types)
 						info ("\t%s", t.to_string ());
 					env.register (((Identifier) lhs).name, this.lhs.sref, types);
 				} else if (this.op == AssignmentOperator.PLUS_EQ) {
-                    var ret = new Gee.HashSet<MesonType>();
-                    var l = env.find_identifier (((Identifier) lhs).name);
-				    foreach (var ri in types) {
-					    foreach (var li in l) {
-						    if (li is MList) {
-							    var mlist = new MList(((MList)li).values.to_array ());
-							    mlist.values.add_all ((ri is MList) ? ((MList)ri).values : ListUtils.of (ri));
-							    ret.add (mlist);
-						    } else if (li is Dictionary && ri is Dictionary) {
-							    var dict = new Dictionary(((Dictionary)li).values.to_array ());
-							    dict.values.add_all ((ri is Dictionary) ? ((Dictionary)ri).values : ListUtils.of (ri));
-							    ret.add (dict);
-						    } else if (li is Elementary && ri is Elementary) {
-							    if (ri == li && li == Elementary.STR || li == Elementary.INT)
-								    ret.add (li);
-						    }
-					    }
-				    }
-				    env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
+					var ret = new Gee.HashSet<MesonType>();
+					var l = env.find_identifier (((Identifier) lhs).name);
+					foreach (var ri in types) {
+						foreach (var li in l) {
+							if (li is MList) {
+								var mlist = new MList (((MList) li).values.to_array ());
+								mlist.values.add_all ((ri is MList) ? ((MList) ri).values : ListUtils.of (ri));
+								ret.add (mlist);
+							} else if (li is Dictionary && ri is Dictionary) {
+								var dict = new Dictionary (((Dictionary) li).values.to_array ());
+								dict.values.add_all ((ri is Dictionary) ? ((Dictionary) ri).values : ListUtils.of (ri));
+								ret.add (dict);
+							} else if (li is Elementary && ri is Elementary) {
+								if (ri == li && li == Elementary.STR || li == Elementary.INT)
+									ret.add (li);
+							}
+						}
+					}
+					env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
 				} else if (this.op == AssignmentOperator.SLASH_EQ) {
-                    var ret = new Gee.HashSet<MesonType>();
-                    var l = env.find_identifier (((Identifier) lhs).name);
-				    foreach (var ri in types) {
-					    foreach (var li in l) {
-						    if (li is Elementary && ri is Elementary) {
-							    if (ri == li && li == Elementary.STR || li == Elementary.INT)
-								    ret.add (li);
-						    }
-					    }
-				    }
-				    env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
+					var ret = new Gee.HashSet<MesonType>();
+					var l = env.find_identifier (((Identifier) lhs).name);
+					foreach (var ri in types) {
+						foreach (var li in l) {
+							if (li is Elementary && ri is Elementary) {
+								if (ri == li && li == Elementary.STR || li == Elementary.INT)
+									ret.add (li);
+							}
+						}
+					}
+					env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
 				} else {
-                    var ret = new Gee.HashSet<MesonType>();
-                    var l = env.find_identifier (((Identifier) lhs).name);
-				    foreach (var ri in types) {
-					    foreach (var li in l) {
-						    if (li is Elementary && ri is Elementary) {
-							    if (ri == li && li == Elementary.INT)
-								    ret.add (li);
-						    }
-					    }
-				    }
-				    env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
+					var ret = new Gee.HashSet<MesonType>();
+					var l = env.find_identifier (((Identifier) lhs).name);
+					foreach (var ri in types) {
+						foreach (var li in l) {
+							if (li is Elementary && ri is Elementary) {
+								if (ri == li && li == Elementary.INT)
+									ret.add (li);
+							}
+						}
+					}
+					env.add_types (((Identifier) lhs).name, this.lhs.sref, ret);
 				}
 			}
-			// list: =,+= is allowed
-			// dict: =,+= is allowed
-			// str: +=
-			// int: all
 		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
@@ -812,10 +793,10 @@ namespace Meson {
 				ret.op = AssignmentOperator.MINUS_EQ;
 				break;
 			default:
-			    diagnostics.add (new Diagnostic.error (
-                    new SourceReference (filename, tsn.named_child (1)),
-                    "Expected assignment_operator, got %s".printf (tsn.named_child(1).type())
-			    ));
+				diagnostics.add (new Diagnostic.error (
+									 new SourceReference (filename, tsn.named_child (1)),
+									 "Expected assignment_operator, got %s".printf (tsn.named_child (1).type ())
+				));
 				break;
 			}
 			return ret;
@@ -837,8 +818,8 @@ namespace Meson {
 				if (tsn.type () == "id_expression")
 					return new Identifier (Util.get_string_value (data, tsn), filename, tsn);
 				diagnostics.add (new Diagnostic.error (
-                    new SourceReference (filename, tsn),
-                    "Unexpected type: %s".printf (tsn.type ())
+									 new SourceReference (filename, tsn),
+									 "Unexpected type: %s".printf (tsn.type ())
 				));
 				return new Identifier ("<<ERROR>>", filename, tsn);
 			}
@@ -873,8 +854,8 @@ namespace Meson {
 					return new Identifier (Util.get_string_value (data, tsn.named_child (0).named_child (0)), filename, tsn.named_child (0).named_child (0));
 				return Expression.parse (data, filename, tsn.named_child (0).named_child (0), diagnostics);
 			default:
-			    diagnostics.add (new Diagnostic.error (new SourceReference (filename, tsn.named_child (0)), "Unexpected child: %s".printf (tsn.named_child (0).type ())));
-			    return new Identifier ("<<ERROR>>", filename, tsn);
+				diagnostics.add (new Diagnostic.error (new SourceReference (filename, tsn.named_child (0)), "Unexpected child: %s".printf (tsn.named_child (0).type ())));
+				return new Identifier ("<<ERROR>>", filename, tsn);
 			}
 		}
 
@@ -1145,6 +1126,76 @@ namespace Meson {
 			}
 			return null;
 		}
+		internal void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			obj.fill_diagnostics (env, diagnostics);
+			var obj_types = obj.deduce_types (env);
+			var found_something = false;
+			foreach (var t in obj_types) {
+				info ("//>>Checking %s for method %s", t.to_string (), this.name);
+				if (t is ObjectType) {
+					var m = ((ObjectType) t).find_method_safe (this.name);
+					found_something |= (m != null);
+				} else if (t is Elementary) {
+					var e = (Elementary) t;
+					if (e == Elementary.STR) {
+						switch (this.name) {
+						case "contains":
+						case "endswith":
+						case "startswith":
+						case "version_compare":
+						case "format":
+						case "join":
+						case "replace":
+						case "strip":
+						case "substring":
+						case "to_lower":
+						case "to_upper":
+						case "underscorify":
+						case "split":
+						case "to_int":
+							found_something = true;
+							break;
+						}
+					} else if (e == Elementary.INT) {
+						switch (this.name) {
+						case "is_even":
+						case "is_odd":
+						case "to_string":
+							found_something = true;
+							break;
+						}
+					} else if (e == Elementary.BOOL) {
+						switch (this.name) {
+						case "to_int":
+						case "to_string":
+							found_something = true;
+							break;
+						}
+					}
+				} else if (t is MList) {
+					switch (this.name) {
+					case "contains":
+					case "get":
+					case "length":
+						found_something = true;
+						break;
+					}
+				} else if (t is Dictionary) {
+					switch (this.name) {
+					case "get":
+					case "has_key":
+					case "keys":
+						found_something = true;
+						break;
+					}
+				}
+			}
+			if (!found_something) {
+				var type_string = obj_types.fold<string> ((a, b) => a.to_string () + "|" + b.to_string (), "").replace ("|]", "]");
+				diagnostics.add (new Diagnostic.error (this.sref, "Unable to find method %s in object of types %s".printf (this.name, type_string)));
+			}
+		}
+
 		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
 			var object = obj.deduce_types (env);
 			var ret = new Gee.HashSet<MesonType>();
@@ -1156,75 +1207,75 @@ namespace Meson {
 						ret.add_all (m.return_type);
 					}
 				} else if (t is Elementary) {
-					var e = (Elementary)t;
+					var e = (Elementary) t;
 					if (e == Elementary.STR) {
 						switch (this.name) {
-							case "contains":
-							case "endswith":
-							case "startswith":
-							case "version_compare":
-								ret.add (Elementary.BOOL);
-								break;
-							case "format":
-							case "join":
-							case "replace":
-							case "strip":
-							case "substring":
-							case "to_lower":
-							case "to_upper":
-							case "underscorify":
-								ret.add (Elementary.STR);
-								break;
-							case "split":
-								ret.add (new MList (new MesonType[]{Elementary.STR}));
-								break;
-							case "to_int":
-								ret.add (Elementary.INT);
-								break;
+						case "contains":
+						case "endswith":
+						case "startswith":
+						case "version_compare":
+							ret.add (Elementary.BOOL);
+							break;
+						case "format":
+						case "join":
+						case "replace":
+						case "strip":
+						case "substring":
+						case "to_lower":
+						case "to_upper":
+						case "underscorify":
+							ret.add (Elementary.STR);
+							break;
+						case "split":
+							ret.add (new MList (new MesonType[] { Elementary.STR }));
+							break;
+						case "to_int":
+							ret.add (Elementary.INT);
+							break;
 						}
 					} else if (e == Elementary.INT) {
 						switch (this.name) {
-							case "is_even":
-							case "is_odd":
-								ret.add (Elementary.BOOL);
-								break;
-							case "to_string":
-								ret.add (Elementary.STR);
-								break;
+						case "is_even":
+						case "is_odd":
+							ret.add (Elementary.BOOL);
+							break;
+						case "to_string":
+							ret.add (Elementary.STR);
+							break;
 						}
 					} else if (e == Elementary.BOOL) {
 						switch (this.name) {
-							case "to_int":
-								ret.add (Elementary.INT);
-								break;
-							case "to_string":
-								ret.add (Elementary.STR);
-								break;
+						case "to_int":
+							ret.add (Elementary.INT);
+							break;
+						case "to_string":
+							ret.add (Elementary.STR);
+							break;
 						}
 					}
 				} else if (t is MList) {
 					switch (this.name) {
-						case "contains":
-							ret.add (Elementary.BOOL);
-							break;
-						case "get":
-							ret.add (Elementary.ANY);
-							break;
-						case "length":
-							ret.add (Elementary.INT);
-							break;
+					case "contains":
+						ret.add (Elementary.BOOL);
+						break;
+					case "get":
+						ret.add (Elementary.ANY);
+						break;
+					case "length":
+						ret.add (Elementary.INT);
+						break;
 					}
 				} else if (t is Dictionary) {
 					switch (this.name) {
-						case "get":
-							ret.add (Elementary.ANY);
-							break;
-						case "has_key":
-							ret.add (Elementary.BOOL);
-							break;
-						case "keys":
-							ret.add (new MList (new MesonType[]{Elementary.STR}));
-							break;
+					case "get":
+						ret.add (Elementary.ANY);
+						break;
+					case "has_key":
+						ret.add (Elementary.BOOL);
+						break;
+					case "keys":
+						ret.add (new MList (new MesonType[] { Elementary.STR }));
+						break;
 					}
 				}
 			}
@@ -1324,6 +1375,22 @@ namespace Meson {
 			ret.if_false = Expression.parse (data, filename, tsn.named_child (2), diagnostics);
 			return ret;
 		}
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			this.condition.fill_diagnostics (env, diagnostics);
+			this.if_true.fill_diagnostics (env, diagnostics);
+			this.if_false.fill_diagnostics (env, diagnostics);
+			var found_it = false;
+			foreach (var t in this.condition.deduce_types (env)) {
+				if (t == Elementary.BOOL) {
+					found_it = true;
+					break;
+				}
+			}
+			if (!found_it) {
+				diagnostics.add (new Diagnostic.error (this.condition.sref, "Condition is not bool"));
+			}
+		}
 	}
 	class FunctionExpression : Expression {
 		internal string name;
@@ -1354,6 +1421,14 @@ namespace Meson {
 			}
 			info ("%s not found", this.name);
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+		}
+
+		internal void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			if (env.registry.find_function (this.name) == null) {
+				diagnostics.add (new Diagnostic.error (this.name_ref, "Unknown function %s".printf (this.name)));
+			}
+			if (this.arg_list != null)
+				this.arg_list.fill_diagnostics (env, diagnostics);
 		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
@@ -1456,6 +1531,11 @@ namespace Meson {
 			}
 			return ret;
 		}
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			foreach (var t in this.args)
+				t.fill_diagnostics (env, diagnostics);
+		}
 	}
 	class KeywordArgument : Expression {
 		internal string name;
@@ -1491,6 +1571,10 @@ namespace Meson {
 			ret.inner = Expression.parse (data, filename, tsn.named_child (1), diagnostics);
 			return ret;
 		}
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			this.inner.fill_diagnostics (env, diagnostics);
+		}
 	}
 	class BinaryExpresssion : Expression {
 		internal Expression rhs;
@@ -1517,12 +1601,12 @@ namespace Meson {
 				foreach (var ri in r) {
 					foreach (var li in l) {
 						if (li is MList) {
-							var mlist = new MList(((MList)li).values.to_array ());
-							mlist.values.add_all ((ri is MList) ? ((MList)ri).values : ListUtils.of (ri));
+							var mlist = new MList (((MList) li).values.to_array ());
+							mlist.values.add_all ((ri is MList) ? ((MList) ri).values : ListUtils.of (ri));
 							ret.add (mlist);
 						} else if (li is Dictionary && ri is Dictionary) {
-							var dict = new Dictionary(((Dictionary)li).values.to_array ());
-							dict.values.add_all ((ri is Dictionary) ? ((Dictionary)ri).values : ListUtils.of (ri));
+							var dict = new Dictionary (((Dictionary) li).values.to_array ());
+							dict.values.add_all ((ri is Dictionary) ? ((Dictionary) ri).values : ListUtils.of (ri));
 							ret.add (dict);
 						} else if (li is Elementary && ri is Elementary) {
 							if (ri == li && li == Elementary.STR || li == Elementary.INT)
@@ -1534,15 +1618,18 @@ namespace Meson {
 					return ret;
 				break;
 			case BinaryOperator.SLASH:
+				var ret = new Gee.HashSet<MesonType>();
 				foreach (var ri in r) {
 					foreach (var li in l) {
 						if (ri == li)
 							if (ri == Elementary.STR)
-								return ListUtils.of (Elementary.STR);
+								ret.add (Elementary.STR);
 							else if (ri == Elementary.INT)
-								return ListUtils.of (Elementary.INT);
+								ret.add (Elementary.INT);
 					}
 				}
+				if (!ret.is_empty)
+					return ret;
 				break;
 			case BinaryOperator.STAR:
 			case BinaryOperator.MOD:
@@ -1555,7 +1642,20 @@ namespace Meson {
 				}
 				break;
 			}
+			info ("%s", this.sref.to_string ());
+			info ("%s", this.op.to_string ());
+			info ("LHS: %s", this.lhs.get_type ().name ());
+			foreach (var li in l)
+				info ("%s", li.to_string ());
+			info ("RHS: %s", this.rhs.get_type ().name ());
+			foreach (var ri in r)
+				info ("%s", ri.to_string ());
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
+		}
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			this.rhs.fill_diagnostics (env, diagnostics);
+			this.lhs.fill_diagnostics (env, diagnostics);
 		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
@@ -1632,12 +1732,12 @@ namespace Meson {
 				ret.op = BinaryOperator.AND;
 				break;
 			default:
-			    ret.op = BinaryOperator.PLUS;
-			    diagnostics.add (new Diagnostic.error (
-			        new SourceReference (filename, op),
-			        "Unexpected binary operator: %s".printf (Util.get_string_value (data, op).strip ())
-			    ));
-			    break;
+				ret.op = BinaryOperator.PLUS;
+				diagnostics.add (new Diagnostic.error (
+									 new SourceReference (filename, op),
+									 "Unexpected binary operator: %s".printf (Util.get_string_value (data, op).strip ())
+				));
+				break;
 			}
 			ret.rhs = Expression.parse (data, filename, tsn.named_child (tsn.named_child_count () == 2 ? 1 : 2), diagnostics);
 			return ret;
@@ -1663,6 +1763,27 @@ namespace Meson {
 			return this.rhs.find_identifier (file, pos);
 		}
 
+		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			if (this.op == UnaryOperator.MINUS) {
+				return ListUtils.of (Elementary.INT);
+			}
+			return ListUtils.of (Elementary.BOOL);
+		}
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			var found_required = false;
+			foreach (var f in this.rhs.deduce_types (env)) {
+				if (this.op == UnaryOperator.MINUS && f == Elementary.INT)
+					found_required = true;
+				else if (this.op != UnaryOperator.MINUS && f == Elementary.BOOL)
+					found_required = true;
+			}
+			if (!found_required) {
+				diagnostics.add (new Diagnostic.error (this.sref, "Invalid unary operator"));
+			}
+			this.rhs.fill_diagnostics (env, diagnostics);
+		}
+
 		internal static new UnaryExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "unary_expression");
 			var ret = new UnaryExpression ();
@@ -1679,12 +1800,12 @@ namespace Meson {
 				ret.op = UnaryOperator.MINUS;
 				break;
 			default:
-			    ret.op = UnaryOperator.NOT;
-			    diagnostics.add (new Diagnostic.error (
-			        new SourceReference (filename, tsn.child (0)),
-			        "Unexpected unary operator: %s".printf (Util.get_string_value (data, tsn.child (0)).strip ())
-			    ));
-			    break;
+				ret.op = UnaryOperator.NOT;
+				diagnostics.add (new Diagnostic.error (
+									 new SourceReference (filename, tsn.child (0)),
+									 "Unexpected unary operator: %s".printf (Util.get_string_value (data, tsn.child (0)).strip ())
+				));
+				break;
 			}
 			return ret;
 		}
@@ -1704,7 +1825,7 @@ namespace Meson {
 			var s = new Gee.HashSet<MesonType>();
 			foreach (var t in types) {
 				if (t is MList) {
-					s.add_all (((MList)t).values);
+					s.add_all (((MList) t).values);
 				}
 			}
 			if (s.is_empty)
@@ -1733,6 +1854,20 @@ namespace Meson {
 			return this.inner.find_identifier (file, pos);
 		}
 
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			var found_list = false;
+			foreach (var f in this.outer.deduce_types (env)) {
+				if (f is MList || f == Elementary.STR || (f is ObjectType && ((ObjectType) f).name == "custom_tgt"))
+					found_list = true;
+				// TODO: custom_target etc can be used, too
+			}
+			if (!found_list) {
+				diagnostics.add (new Diagnostic.error (this.sref, "Can't access object as a list"));
+			}
+			this.inner.fill_diagnostics (env, diagnostics);
+			this.outer.fill_diagnostics (env, diagnostics);
+		}
+
 		internal static new ArrayAccessExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			assert (tsn.type () == "subscript_expression");
 			var ret = new ArrayAccessExpression ();
@@ -1748,16 +1883,6 @@ namespace Meson {
 			var ret = new Gee.HashSet<MesonType>();
 			ret.add (t);
 			return ret;
-		}
-
-		internal static bool contains_elementary (Gee.Set<MesonType> t, ElementaryType et) {
-			foreach (var f in t) {
-				if (f is Elementary) {
-					if (((Elementary) f).type == et)
-						return true;
-				}
-			}
-			return false;
 		}
 	}
 }
