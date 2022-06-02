@@ -375,7 +375,6 @@ namespace Meson {
 						break;
 					}
 				}
-				info ("%s", found_bool.to_string ());
 				if (found_bool)
 					continue;
 				if (!found_bool)
@@ -1199,6 +1198,14 @@ namespace Meson {
 		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
 			var object = obj.deduce_types (env);
 			var ret = new Gee.HashSet<MesonType>();
+			if (this.obj is Identifier) {
+				var name = ((Identifier)this.obj).name;
+				if (name == "meson" || name == "host_machine" || name == "build_machine" || name == "target_machine") {
+					var rets = env.registry.find_type (name).find_method_safe (this.name).return_type;
+					ret.add_all (rets);
+					return ret;
+				}
+			}
 			foreach (var t in object) {
 				if (t is ObjectType) {
 					var o = (ObjectType) t;
@@ -1882,6 +1889,10 @@ namespace Meson {
 		internal static Gee.Set<MesonType> of (MesonType t) {
 			var ret = new Gee.HashSet<MesonType>();
 			ret.add (t);
+			if (t is Elementary && ((Elementary)t) == Elementary.NOT_DEDUCEABLE) {
+				ret.add (new MList (new MesonType[]{Elementary.NOT_DEDUCEABLE}));
+				ret.add (new Dictionary (new MesonType[]{Elementary.NOT_DEDUCEABLE}));
+			}
 			return ret;
 		}
 	}

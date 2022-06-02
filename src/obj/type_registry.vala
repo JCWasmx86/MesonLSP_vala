@@ -43,6 +43,7 @@ namespace Meson {
 		internal void register_type (string name, string super) {
 			var obj = new ObjectType ();
 			obj.name = name;
+			obj.registry = this;
 			obj.super_type = super;
 			this.types.add (obj);
 		}
@@ -114,6 +115,7 @@ namespace Meson {
 		internal string name;
 		internal string super_type;
 		internal string docs;
+		internal TypeRegistry registry;
 		internal Gee.List<Method> methods { get; set; default = new Gee.ArrayList<Method>(); }
 		internal ObjectType register_function (string name, Gee.List<Parameter> args, MesonType[] ret, bool varargs = false) {
 			var m = new Method ();
@@ -130,6 +132,9 @@ namespace Meson {
 			foreach (var m in this.methods) {
 				if (m.name == name)
 					return m;
+			}
+			if (this.super_type != "") {
+				return this.registry.find_type (this.super_type).find_method_safe (name);
 			}
 			return null;
 		}
