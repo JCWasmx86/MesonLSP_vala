@@ -879,6 +879,14 @@ namespace Meson {
 			return this.name;
 		}
 		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			if (this.name == "meson")
+				return ListUtils.of (env.registry.find_type ("meson"));
+			if (this.name == "host_machine")
+				return ListUtils.of (env.registry.find_type ("host_machine"));
+			if (this.name == "build_machine")
+				return ListUtils.of (env.registry.find_type ("build_machine"));
+			if (this.name == "target_machine")
+				return ListUtils.of (env.registry.find_type ("target_machine"));
 			return env.find_identifier (this.name);
 		}
 
@@ -1125,7 +1133,7 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+		internal override void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			obj.fill_diagnostics (env, diagnostics);
 			var obj_types = obj.deduce_types (env);
 			var found_something = false;
@@ -1430,7 +1438,7 @@ namespace Meson {
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 		}
 
-		internal void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+		internal override void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
 			if (env.registry.find_function (this.name) == null) {
 				diagnostics.add (new Diagnostic.error (this.name_ref, "Unknown function %s".printf (this.name)));
 			}
@@ -1439,7 +1447,7 @@ namespace Meson {
 		}
 
 		internal override new Hover? hover (TypeRegistry tr, string file, Position pos, HoverContext ctx) {
-			if (this.name_ref.contains (file, pos)) {
+			if (this.name_ref.contains (file, pos) && tr.find_function (this.name) != null) {
 				var hover = new Hover ();
 				hover.range = this.sref.to_lsp_range ();
 				hover.contents = new MarkupContent ();

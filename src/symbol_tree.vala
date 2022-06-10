@@ -46,12 +46,13 @@ namespace Meson {
 					info ("Found call to subdir: %s", ((StringLiteral) arg).val);
 					var found = false;
 					foreach (var data in this.datas) {
-						if (found) {
-							assert (data is SymbolTree);
+						if (found && data is SymbolTree) {
 							var s = ((SymbolTree) data).merge ();
 							to_insert.insert_all (i, s.statements);
 							i += s.statements.size;
 							break;
+						} else if (found) {
+							found = false;
 						}
 						if (data is Subdir && ((Subdir) data).name == ((StringLiteral) arg).val) {
 							found = true;
@@ -131,7 +132,8 @@ namespace Meson {
 					if (s.named_child (0).type () == "function_expression") {
 						var fe = s.named_child (0).named_child (0);
 						var name = data.substring (fe.start_byte (), fe.end_byte () - fe.start_byte ());
-						if (name == "subdir") {
+						// TODO: Make check even better
+						if (name == "subdir" && s.named_child (0).named_child_count () > 1 && s.named_child (0).named_child (1).named_child_count () > 0) {
 							var str_literal = s.named_child (0).named_child (1).named_child (0).named_child (0).named_child (0);
 							var str = data.substring (str_literal.start_byte () + 1, str_literal.end_byte () - str_literal.start_byte () - 2);
 							info ("Found subdir: %s", str);
@@ -140,9 +142,10 @@ namespace Meson {
 							ret.datas.add (sd);
 							var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
 							var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches, diagnostics);
-							assert (st.file != null);
-							ret.datas.add (st);
-							ret.child_files.add (File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str + "/meson.build").get_path ());
+							if (st.file != null) {
+								ret.datas.add (st);
+								ret.child_files.add (File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str + "/meson.build").get_path ());
+							}
 						}
 					}
 				} else if (s.type () == "assignment_statement") {
