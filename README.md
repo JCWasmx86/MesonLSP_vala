@@ -47,13 +47,13 @@ You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin
 - GNOME Builder
 
 ## TODO-List
-- Hover
+- Hover (Partially)
 - Fix memory leaks
 - Add documentation for hover
 - Autocompletion
 - Performance improvements
-- Type deduction/linting
-- Make it live together with Vala-Language-Server
+- Type deduction/linting (WIP)
+- Make it live together with Vala-Language-Server (Will work in GTK4-Port of GNOME-Builder)
 - Improve code quality
 - Semantic highlighting
 
@@ -73,8 +73,8 @@ I had these requirements for the language server:
 4. Highlevel language
 5. Interop with C
 
-Some would consider rust a good candidate, but 4. is a dealbreaker for me,
-as fast compile times are needed for my style of development and the final binaries are massive.
+Some would consider Rust a good candidate, but 4. is a dealbreaker for me, as fast compile times are needed for my style of development and the final binaries are quite huge. Furthermore I don't like writing
+code in Rust.
 
 C is maybe a bit too low-level for this task.
 
@@ -85,3 +85,6 @@ Using GraalVM to AOT-compile this to a native executable would check all marks e
 
 So my choice fell onto Vala, it checks all marks, the dependencies like glib, gobject and json-glib are basically on every Linux desktop.
 
+### Why no VSCode-Support/Plugin?
+
+I don't use it, but if needed, I'm happy to accept any patches.
