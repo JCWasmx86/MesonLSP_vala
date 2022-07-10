@@ -1428,6 +1428,26 @@ namespace Meson {
 		}
 
 		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
+			if (this.name == "import") {
+				if (this.arg_list != null && this.arg_list.args[0] is StringLiteral) {
+					var module = ((StringLiteral)this.arg_list.args[0]).val;
+					if (env.registry.find_type_safe (module + "_module") != null) {
+						return ListUtils.of (env.registry.find_type_safe (module + "_module"));
+					}
+				}
+			} else if (this.name == "get_variable") {
+				if (this.arg_list != null && this.arg_list.args[0] is StringLiteral) {
+					var variable = ((StringLiteral)this.arg_list.args[0]).val;
+					var v = env.options[variable];
+					if (v.type == "string") {
+						return ListUtils.of (Elementary.STR);
+					} else if (v.type == "boolean") {
+						return ListUtils.of (Elementary.BOOL);
+					} else if (v.type == "integer") {
+						return ListUtils.of (Elementary.INT);
+					}
+				}
+			}
 			var r = env.registry.find_function (this.name);
 			if (r != null) {
 				var s = new Gee.HashSet<MesonType>();
