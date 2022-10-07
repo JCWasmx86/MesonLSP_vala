@@ -304,6 +304,15 @@ namespace Meson {
 		internal bool is_break;
 	}
 
+	class ErrorNode : Expression {
+		private string msg;
+
+		public ErrorNode (SourceReference sref, string? msg = null) {
+			this.sref = sref;
+			this.msg = msg ?? "Unknown Error";
+		}
+	}
+
 	class Statement : CodeNode {
 		internal static Statement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
 			if (tsn.type () != "statement" && tsn.type () != "comment") {
@@ -311,6 +320,9 @@ namespace Meson {
 				js.sref = new SourceReference (filename, tsn);
 				js.is_break = Util.get_string_value (data, tsn).strip () == "break";
 				return js;
+			}
+			if (tsn.named_child_count () == 0) {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected named child");
 			}
 			var child = tsn.named_child (0);
 			switch (child.type ()) {
@@ -325,11 +337,7 @@ namespace Meson {
 			case "comment":
 				break;
 			}
-			var diag = new Diagnostic ();
-			diag.range = new SourceReference (filename, tsn).to_lsp_range ();
-			diag.severity = DiagnosticSeverity.Error;
-			diag.message = "Unknown statement type: %s".printf (child.type ());
-			assert_not_reached ();
+			return new ErrorNode (new SourceReference (filename, tsn), "Unknown statement type: %s".printf (child.type ()));
 		}
 	}
 	class CodeNode : GLib.Object {
@@ -766,8 +774,10 @@ namespace Meson {
 		}
 
 
-		internal static new AssignmentStatement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "assignment_statement");
+		internal static new Statement parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "assignment_statement") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected AssignmentStatement, got %s".printf (tsn.type ()));
+			}
 			var ret = new AssignmentStatement ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.lhs = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
@@ -820,7 +830,7 @@ namespace Meson {
 									 new SourceReference (filename, tsn),
 									 "Unexpected type: %s".printf (tsn.type ())
 				));
-				return new Identifier ("<<ERROR>>", filename, tsn);
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected IdExpression, got %s".printf (tsn.type ()));
 			}
 			switch (tsn.named_child (0).type ()) {
 			case "function_expression":
@@ -854,7 +864,7 @@ namespace Meson {
 				return Expression.parse (data, filename, tsn.named_child (0).named_child (0), diagnostics);
 			default:
 				diagnostics.add (new Diagnostic.error (new SourceReference (filename, tsn.named_child (0)), "Unexpected child: %s".printf (tsn.named_child (0).type ())));
-				return new Identifier ("<<ERROR>>", filename, tsn);
+				return new ErrorNode (new SourceReference (filename, tsn), "Unexpected %s".printf (tsn.named_child (0).type ()));
 			}
 		}
 
@@ -947,8 +957,10 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal static new DictionaryLiteral parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "dictionary_literal");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "dictionary_literal") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected DictionaryLiteral, got %s".printf (tsn.type ()));
+			}
 			var ret = new DictionaryLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
@@ -996,8 +1008,10 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal static new ArrayLiteral parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "array_literal");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "array_literal") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected ArrayLiteral, got %s".printf (tsn.type ()));
+			}
 			var ret = new ArrayLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
@@ -1025,8 +1039,10 @@ namespace Meson {
 				into.add (symbol);
 		}
 
-		internal static new IntegerLiteral parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "integer_literal");
+		internal static new Expression parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "integer_literal") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected IntegerLiteral, got %s".printf (tsn.type ()));
+			}
 			var ret = new IntegerLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			if (str.has_prefix ("0x"))
@@ -1057,8 +1073,10 @@ namespace Meson {
 				into.add (symbol);
 		}
 
-		internal static new BooleanLiteral parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "boolean_literal");
+		internal static new Expression parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "boolean_literal") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected BooleanLiteral, got %s".printf (tsn.type ()));
+			}
 			var ret = new BooleanLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.val = str == "true";
@@ -1082,8 +1100,10 @@ namespace Meson {
 				into.add (symbol);
 		}
 
-		internal static new StringLiteral parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "string_literal");
+		internal static new Expression parse (string str, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "string_literal") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected StringLiteral, got %s".printf (tsn.type ()));
+			}
 			var ret = new StringLiteral ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.val = str.has_prefix ("'''") ? str.replace ("'''", "") : str.substring (1, str.length - 2);
@@ -1302,7 +1322,7 @@ namespace Meson {
 		internal Expression obj;
 		internal string name;
 		internal SourceReference name_ref;
-		internal ArgumentList? list;
+		internal Expression? list;
 
 		internal override void document_symbols (string path, Gee.List<DocumentSymbol> into) {
 			this.obj.document_symbols (path, into);
@@ -1326,8 +1346,10 @@ namespace Meson {
 				return s;
 			return this.list == null ? null : this.list.find_identifier (file, pos);
 		}
-		internal static new MethodExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "method_expression");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "method_expression") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected MethodExpression, got %s".printf (tsn.type ()));
+			}
 			var ret = new MethodExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.name_ref = new SourceReference (filename, tsn.named_child (1));
@@ -1381,8 +1403,10 @@ namespace Meson {
 			return this.if_false.find_identifier (file, pos);
 		}
 
-		internal static new ConditionalExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "conditional_expression");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "conditional_expression") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected ConditionalExpression, got %s".printf (tsn.type ()));
+			}
 			var ret = new ConditionalExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.condition = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
@@ -1409,35 +1433,36 @@ namespace Meson {
 	}
 	class FunctionExpression : Expression {
 		internal string name;
-		internal ArgumentList? arg_list;
+		internal Expression? arg_list;
 		internal SourceReference name_ref;
 
 		internal override string? jump_to_subdir (string file, Position pos) {
-			var usable_args = this.arg_list != null && this.arg_list.args.size > 0 && this.arg_list.args[0] is StringLiteral;
+			if (this.arg_list == null || this.arg_list is ErrorNode)
+					return null;
+			var arg_list = (ArgumentList) arg_list;
+			var usable_args = arg_list != null && arg_list.args.size > 0 && arg_list.args[0] is StringLiteral;
 			if (this.sref.contains (file, pos) && this.name == "subdir" && usable_args) {
-				var name = ((StringLiteral) this.arg_list.args[0]).val;
+				var name = ((StringLiteral) arg_list.args[0]).val;
 				info ("Call to subdir %s (From %s)!", name, this.sref.file);
 				var f = File.new_for_path (this.sref.file).get_parent ().get_child (name + "/meson.build");
 				if (f.query_exists ()) {
 					return f.get_path ();
 				}
 			}
-			if (this.arg_list == null)
-				return null;
 			return this.arg_list.jump_to_subdir (file, pos);
 		}
 
 		internal override Gee.Set<MesonType> deduce_types (MesonEnv env) {
 			if (this.name == "import") {
-				if (this.arg_list != null && this.arg_list.args[0] is StringLiteral) {
-					var module = ((StringLiteral)this.arg_list.args[0]).val;
+				if (this.arg_list != null && this.arg_list is ArgumentList && ((ArgumentList)this.arg_list).args[0] is StringLiteral) {
+					var module = ((StringLiteral)((ArgumentList)this.arg_list).args[0]).val;
 					if (env.registry.find_type_safe (module + "_module") != null) {
 						return ListUtils.of (env.registry.find_type_safe (module + "_module"));
 					}
 				}
 			} else if (this.name == "get_variable") {
-				if (this.arg_list != null && this.arg_list.args[0] is StringLiteral) {
-					var variable = ((StringLiteral)this.arg_list.args[0]).val;
+				if (this.arg_list != null && this.arg_list is ArgumentList && ((ArgumentList)this.arg_list).args[0] is StringLiteral) {
+					var variable = ((StringLiteral)((ArgumentList)this.arg_list).args[0]).val;
 					var v = env.options[variable];
 					if (v.type == "string") {
 						return ListUtils.of (Elementary.STR);
@@ -1475,8 +1500,8 @@ namespace Meson {
 				hover.contents.value = tr.find_function (this.name).generate_docs ();
 				return hover;
 				// TODO: Load info from TypeRegistry
-			} else if (this.arg_list != null && this.arg_list.sref.contains (file, pos) && this.name == "get_option") {
-				var args = arg_list.args;
+			} else if (this.arg_list != null && this.arg_list is ArgumentList && this.arg_list.sref.contains (file, pos) && this.name == "get_option") {
+				var args = ((ArgumentList)this.arg_list).args;
 				if (args.size != 0) {
 					var first_arg = args[0];
 					if (first_arg is StringLiteral) {
@@ -1519,8 +1544,10 @@ namespace Meson {
 			return this.arg_list == null ? null : this.arg_list.find_identifier (file, pos);
 		}
 
-		internal static new FunctionExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "function_expression");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "function_expresion") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected FunctionExpression, got %s".printf (tsn.type ()));
+			}
 			var ret = new FunctionExpression ();
 			ret.name_ref = new SourceReference (filename, tsn.named_child (0));
 			ret.sref = new SourceReference (filename, tsn);
@@ -1552,8 +1579,10 @@ namespace Meson {
 			}
 			return null;
 		}
-		internal static new ArgumentList parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "argument_list");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "argument_list") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected ArgumentList, got %s".printf (tsn.type ()));
+			}
 			var ret = new ArgumentList ();
 			ret.sref = new SourceReference (filename, tsn);
 			for (var i = 0; i < tsn.named_child_count (); i++) {
@@ -1597,8 +1626,10 @@ namespace Meson {
 			return this.inner.find_identifier (file, pos);
 		}
 
-		internal static new KeywordArgument parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "keyword_item");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "keyword_item") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected KeywordItem, got %s".printf (tsn.type ()));
+			}
 			var ret = new KeywordArgument ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.key_ref = new SourceReference (filename, tsn.named_child (0));
@@ -1677,14 +1708,6 @@ namespace Meson {
 				}
 				break;
 			}
-			info ("%s", this.sref.to_string ());
-			info ("%s", this.op.to_string ());
-			info ("LHS: %s", this.lhs.get_type ().name ());
-			foreach (var li in l)
-				info ("%s", li.to_string ());
-			info ("RHS: %s", this.rhs.get_type ().name ());
-			foreach (var ri in r)
-				info ("%s", ri.to_string ());
 			return ListUtils.of (Elementary.NOT_DEDUCEABLE);
 		}
 
@@ -1714,8 +1737,10 @@ namespace Meson {
 			return this.lhs.find_identifier (file, pos);
 		}
 
-		internal static new BinaryExpresssion parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "binary_expression");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "binary_expression") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected BinaryExpression, got %s".printf (tsn.type ()));
+			}
 			var ret = new BinaryExpresssion ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.lhs = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
@@ -1819,8 +1844,10 @@ namespace Meson {
 			this.rhs.fill_diagnostics (env, diagnostics);
 		}
 
-		internal static new UnaryExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "unary_expression");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "unary_expression") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected UnaryExpression, got %s".printf (tsn.type ()));
+			}
 			var ret = new UnaryExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.rhs = Expression.parse (data, filename, tsn.named_child (0), diagnostics);
@@ -1903,8 +1930,10 @@ namespace Meson {
 			this.outer.fill_diagnostics (env, diagnostics);
 		}
 
-		internal static new ArrayAccessExpression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			assert (tsn.type () == "subscript_expression");
+		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
+			if (tsn.type () != "subscript_expression") {
+				return new ErrorNode (new SourceReference (filename, tsn), "Expected SubscriptExpression, got %s".printf (tsn.type ()));
+			}
 			var ret = new ArrayAccessExpression ();
 			ret.sref = new SourceReference (filename, tsn);
 			ret.outer = Expression.parse (data, filename, tsn.named_child (0), diagnostics);

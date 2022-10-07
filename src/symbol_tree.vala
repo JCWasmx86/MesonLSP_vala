@@ -39,9 +39,9 @@ namespace Meson {
 		void analyze_ast_stmt (Gee.List<Statement> to_insert, Statement stmt, ref int i) {
 			if (stmt is FunctionExpression && ((FunctionExpression) stmt).name == "subdir") {
 				var arg_list = ((FunctionExpression) stmt).arg_list;
-				if (arg_list == null || arg_list.args.size == 0)
+				if (arg_list == null || !(arg_list is ArgumentList) || ((ArgumentList)arg_list).args.size == 0)
 					return;
-				var arg = arg_list.args[0];
+				var arg = ((ArgumentList)arg_list).args[0];
 				if (arg is StringLiteral) {
 					info ("Found call to subdir: %s", ((StringLiteral) arg).val);
 					var found = false;
