@@ -31,6 +31,7 @@ namespace Meson {
 		}
 
 		internal void register_function (string name, Gee.List<Parameter> args, MesonType[] ret, bool variadic) {
+			info ("Registering %s", name);
 			var m = new Method ();
 			m.parameters = args;
 			m.name = name;
@@ -49,6 +50,7 @@ namespace Meson {
 		}
 
 		internal Method? find_function (string name) {
+			info ("Looking for function %s", name);
 			foreach (var t in this.functions) {
 				if (t.name == name)
 					return t;

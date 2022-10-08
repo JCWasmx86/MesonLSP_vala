@@ -15,14 +15,12 @@ An experimental, *WIP* implementation of a meson language server
 
 ## Installation
 
-Only GNOME-Builder is supported at the moment
+Only GNOME-Builder is supported at the moment.
 ```
 meson build
 cd build&&ninja install&&cd ..
-mkdir -p ~/.local/share/gnome-builder/plugins
-cp plugins/* ~/.local/share/gnome-builder/plugins
 ```
-You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin in order to make it load in Builder
+Install the meson plugin from [here](https://github.com/JCWasmx86/GNOME-Builder-Plugins)
 
 ## What works?
 - Navigating by clicking on variables
@@ -32,19 +30,12 @@ You may have to tweak the `X-Builder-ABI=43.0` value in plugins/meson_lsp.plugin
 - Hovering over options gives a description of it
 
 ## Status
-### Parsing works for all meson files (But type validation fails because of missing definitions, I have not implemented yet)
-- GNOME-Builder
-- gtk
-- mesa
-- glib
-- systemd
-
-## Issues:
+### Issues:
 - Parsing big projects (E.g. mesa) leads to stuttering
 - After some time it disconnects from GNOME-Builder (Or the other way round)
 
-## Supported software
-- GNOME Builder
+### Supported software
+- GNOME Builder (See https://github.com/JCWasmx86/GNOME-Builder-Plugins/)
 
 ## TODO-List
 - Hover (Partially)

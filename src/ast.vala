@@ -310,6 +310,7 @@ namespace Meson {
 		public ErrorNode (SourceReference sref, string? msg = null) {
 			this.sref = sref;
 			this.msg = msg ?? "Unknown Error";
+			warning (">> %s", this.msg);
 		}
 	}
 
@@ -663,7 +664,7 @@ namespace Meson {
 			var types = rhs.deduce_types (env);
 			if (lhs is Identifier) {
 				if (this.op == AssignmentOperator.EQ) {
-					info ("Deduced in %s (%u):", this.sref.to_string (), types.size);
+					info ("Deduced in %s (%u, %s):", this.sref.to_string (), types.size, rhs.get_type ().name ());
 					foreach (var t in types)
 						info ("\t%s", t.to_string ());
 					env.register (((Identifier) lhs).name, this.lhs.sref, types);
@@ -1464,12 +1465,20 @@ namespace Meson {
 				if (this.arg_list != null && this.arg_list is ArgumentList && ((ArgumentList)this.arg_list).args[0] is StringLiteral) {
 					var variable = ((StringLiteral)((ArgumentList)this.arg_list).args[0]).val;
 					var v = env.options[variable];
-					if (v.type == "string") {
-						return ListUtils.of (Elementary.STR);
-					} else if (v.type == "boolean") {
-						return ListUtils.of (Elementary.BOOL);
-					} else if (v.type == "integer") {
-						return ListUtils.of (Elementary.INT);
+					if (v != null) {
+						if (v.type == "string") {
+							return ListUtils.of (Elementary.STR);
+						} else if (v.type == "boolean") {
+							return ListUtils.of (Elementary.BOOL);
+						} else if (v.type == "integer") {
+							return ListUtils.of (Elementary.INT);
+						} else {
+							info (">> Option %s is a %s", variable, v.type ?? "<<Unknown>>");
+							return ListUtils.of (Elementary.ANY);
+						}
+					} else {
+						info (">> Option %s is missing", variable);
+						return ListUtils.of (Elementary.ANY);
 					}
 				}
 			}
@@ -1545,7 +1554,7 @@ namespace Meson {
 		}
 
 		internal static new Expression parse (string data, string filename, TreeSitter.TSNode tsn, Gee.Set<Diagnostic> diagnostics) {
-			if (tsn.type () != "function_expresion") {
+			if (tsn.type () != "function_expression") {
 				return new ErrorNode (new SourceReference (filename, tsn), "Expected FunctionExpression, got %s".printf (tsn.type ()));
 			}
 			var ret = new FunctionExpression ();
