@@ -21,6 +21,24 @@
 namespace Meson {
 	internal static void populate_typeregistry_modules (TypeRegistry tr) {
 		tr.register_type ("cmake_module", "module");
+		tr.register_type ("cmake_subproject", "module");
+		tr.register_type ("cmake_subproject_options", "module");
+		tr.find_type ("cmake_module").register_function ("write_basic_package_version_file", new ParameterBuilder ()
+		.build (), new MesonType[] {
+				Elementary.VOID
+		});
+		tr.find_type ("cmake_module").register_function ("configure_package_config_file", new ParameterBuilder ()
+		.build (), new MesonType[] {
+				Elementary.VOID
+		});
+		tr.find_type ("cmake_module").register_function ("subproject", new ParameterBuilder ()
+		.build (), new MesonType[] {
+				tr.find_type ("cmake_subproject")
+		});
+		tr.find_type ("cmake_module").register_function ("subproject_options", new ParameterBuilder ()
+		.build (), new MesonType[] {
+				tr.find_type ("cmake_subproject_options")
+		});
 		tr.register_type ("cuda_module", "module");
 		tr.register_type ("dlang_module", "module");
 		tr.register_type ("fs_module", "module");
