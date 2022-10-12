@@ -17,6 +17,10 @@
  */
 
 int main (string[] args) {
+	if (args.length >= 2 && args[1] == "--version") {
+		stdout.printf ("0.0.1alpha\n");
+		return 0;
+	}
 	if (args.length == 2 && !args[1].has_prefix ("file:///")) {
 		var start = GLib.get_real_time () / 1000.0;
 		for (var i = 0; i < 1000; i++) {
