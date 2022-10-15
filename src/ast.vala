@@ -312,6 +312,10 @@ namespace Meson {
 			this.msg = msg ?? "Unknown Error";
 			warning (">> %s", this.msg);
 		}
+
+		internal override new void fill_diagnostics (MesonEnv env, Gee.List<Diagnostic> diagnostics) {
+			diagnostics.add (new Diagnostic.error (this.sref, this.msg));
+		}
 	}
 
 	class Statement : CodeNode {

@@ -20,9 +20,9 @@
 
 namespace Meson {
 	class SymbolTree : Data {
-		internal Gee.List<Data> datas { get; set; default = new Gee.ArrayList<Data>(); }
-		internal Gee.Map<string, string> patches { get; set; default = new Gee.HashMap<string, string>(); }
-		internal Gee.List<string> child_files { get; set; default = new Gee.ArrayList<string>(); }
+		internal Gee.List<Data> datas { get; set; default = new Gee.ArrayList<Data> (); }
+		internal Gee.Map<string, string> patches { get; set; default = new Gee.HashMap<string, string> (); }
+		internal Gee.List<string> child_files { get; set; default = new Gee.ArrayList<string> (); }
 		internal string filename;
 		internal SourceFile? file;
 		internal Gee.List<Symbol> flatten () {
@@ -39,9 +39,9 @@ namespace Meson {
 		void analyze_ast_stmt (Gee.List<Statement> to_insert, Statement stmt, ref int i) {
 			if (stmt is FunctionExpression && ((FunctionExpression) stmt).name == "subdir") {
 				var arg_list = ((FunctionExpression) stmt).arg_list;
-				if (arg_list == null || !(arg_list is ArgumentList) || ((ArgumentList)arg_list).args.size == 0)
+				if (arg_list == null || !(arg_list is ArgumentList) || ((ArgumentList) arg_list).args.size == 0)
 					return;
-				var arg = ((ArgumentList)arg_list).args[0];
+				var arg = ((ArgumentList) arg_list).args[0];
 				if (arg is StringLiteral) {
 					info ("Found call to subdir: %s", ((StringLiteral) arg).val);
 					var found = false;
@@ -79,7 +79,7 @@ namespace Meson {
 			return this.file;
 		}
 
-		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches = new Gee.HashMap<string, string>(), Gee.Set<Diagnostic> diagnostics) {
+		public static SymbolTree build (Uri uri, Gee.Map<string, string> patches = new Gee.HashMap<string, string> (), Gee.Set<Diagnostic> diagnostics) {
 			var ret = new SymbolTree ();
 			ret.patches = patches;
 			var file = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), "meson.build");
@@ -136,15 +136,17 @@ namespace Meson {
 						if (name == "subdir" && s.named_child (0).named_child_count () > 1 && s.named_child (0).named_child (1).named_child_count () > 0) {
 							var str_literal = s.named_child (0).named_child (1).named_child (0).named_child (0).named_child (0);
 							var str = data.substring (str_literal.start_byte () + 1, str_literal.end_byte () - str_literal.start_byte () - 2);
-							info ("Found subdir: %s", str);
-							var sd = new Subdir ();
-							sd.name = str;
-							ret.datas.add (sd);
-							var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
-							var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches, diagnostics);
-							if (st.file != null) {
-								ret.datas.add (st);
-								ret.child_files.add (File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str + "/meson.build").get_path ());
+							if (str != null) {
+								info ("Found subdir: %s", str);
+								var sd = new Subdir ();
+								sd.name = str;
+								ret.datas.add (sd);
+								var new_uri = File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str).get_uri ();
+								var st = SymbolTree.build (Uri.parse (new_uri, UriFlags.NONE), patches, diagnostics);
+								if (st.file != null) {
+									ret.datas.add (st);
+									ret.child_files.add (File.new_build_filename (File.new_for_uri (uri.to_string ()).get_path (), str + "/meson.build").get_path ());
+								}
 							}
 						}
 					}
