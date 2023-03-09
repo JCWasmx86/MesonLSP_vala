@@ -1,3 +1,27 @@
+# **⚠️See [here](https://github.com/JCWasmx86/Swift-MesonLSP) for a rewrite⚠️**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Meson LSP
 
 An experimental, *WIP* implementation of a meson language server
